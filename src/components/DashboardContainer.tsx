@@ -26,6 +26,7 @@ import {
   collection,
   onSnapshot,
   addDoc,
+  setDoc,
   deleteDoc,
   updateDoc,
   doc,
@@ -36,7 +37,7 @@ import {
 } from "firebase/firestore";
 import { seedDatabaseIfNeeded } from "../lib/seed";
 import { useAuth } from "../contexts/AuthContext";
-import { getOfflineQueue, removeQueueItem } from "../lib/offlineQueue";
+import { getOfflineQueue, removeQueueItem, markQueueItemFailed } from "../lib/offlineQueue";
 import { logAuditAction } from "../lib/audit";
 
 export const DashboardContainer: React.FC = () => {
@@ -109,7 +110,11 @@ export const DashboardContainer: React.FC = () => {
               if (analysis.error) throw new Error(analysis.error);
               const reportInfo = analysis.result;
               
-              await addDoc(collection(db, "sirsEvents"), {
+              // Deterministic doc id = queue item id, so a retry after a
+              // partial failure overwrites the same document instead of
+              // creating a duplicate report.
+              await setDoc(doc(db, "sirsEvents", item.id), {
+                idempotencyKey: item.id,
                 priority: reportInfo.priority || 2,
                 message: reportInfo.autofillReport?.whatHappened || item.data.description || "Offline report",
                 reportInfo: reportInfo,
@@ -123,6 +128,7 @@ export const DashboardContainer: React.FC = () => {
             await removeQueueItem(item.id);
           } catch (e) {
             console.error("Failed to sync item", e);
+            await markQueueItemFailed(item.id);
           }
         }
         syncingRef.current = false;

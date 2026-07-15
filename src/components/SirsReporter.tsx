@@ -164,7 +164,7 @@ ${sirsResult.autofillReport.regulatorNotification}
     if (!isGoogleAuth) {
       setDraftEmail({ subject, body: emailBody, to });
       setEmailStatus("error");
-      setEmailError("Real Gmail authorization is required to send emails directly. Below is the drafted notice for your compliance team.");
+      setEmailError("Real Gmail authorization is required to send emails directly. Below is the drafted internal notification for the Manager/RN.");
       return;
     }
 
@@ -467,10 +467,10 @@ ${sirsResult.autofillReport.regulatorNotification}
             <div className="h-64 border border-slate-200 rounded-2xl bg-slate-50 p-10 flex flex-col items-center justify-center text-center animate-in fade-in">
               <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
               <h3 className="text-xl font-bold text-slate-800">
-                Preparing Submission Draft...
+                Preparing SIRS Submission Pack...
               </h3>
               <p className="text-slate-500 mt-2">
-                Emailing the draft notice to the facility compliance inbox via Gmail API.
+                Compiling the draft and sending an internal notification to the Manager/RN via Gmail API.
               </p>
             </div>
           ) : isSubmitted && sirsResult ? (
@@ -480,11 +480,12 @@ ${sirsResult.autofillReport.regulatorNotification}
                   <CheckCircle className="w-10 h-10 text-emerald-600" />
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">
-                  Draft Ready for My Aged Care Portal <span>&#10003;</span>
+                  SIRS Submission Pack Prepared <span>&#10003;</span>
                 </h2>
                 <p className="text-emerald-700 font-medium">
-                  Prepared for authorised submission within the mandatory{" "}
-                  {sirsResult.priority === 1 ? "24-hour" : "30-day"} window.
+                  A draft has been prepared for authorised submission through
+                  the My Aged Care Service and Support Portal within the
+                  mandatory {sirsResult.priority === 1 ? "24-hour" : "30-day"} window.
                 </p>
               </div>
 
@@ -492,7 +493,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                 <div className="flex items-center gap-2 mb-4 text-slate-500 text-sm border-b border-slate-200 pb-4">
                   <Send className="w-4 h-4" />
                   <span>
-                    Draft emailed to the facility compliance inbox via Gmail API.
+                    Internal notification sent to the Manager/RN via Gmail API.
                     The official SIRS notice must be submitted by an authorised
                     person through the My Aged Care Service and Support Portal.
                   </span>
@@ -759,12 +760,11 @@ ${sirsResult.autofillReport.regulatorNotification}
                     </div>
                   </div>
 
-                  {sirsResult.searchUnavailable && (
+                  {sirsResult.submissionBlocked && (
                     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-sm text-amber-800">
-                      <strong>Unverified preliminary assessment:</strong> live ACQSC
-                      guidance could not be retrieved (Google Search grounding
-                      unavailable). Filing is disabled. Verify this assessment
-                      against current ACQSC guidance before any submission.
+                      <strong>⚠️ Live ACQSC verification unavailable.</strong>{" "}
+                      This preliminary assessment cannot be used for submission.
+                      Please verify against the official ACQSC guidance.
                     </div>
                   )}
                   <div className="flex justify-end pt-4 gap-4">
@@ -776,15 +776,15 @@ ${sirsResult.autofillReport.regulatorNotification}
                       {emailStatus === "sending" && <Loader2 className="w-5 h-5 animate-spin" />}
                       {emailStatus === "sent" && <CheckCircle className="w-5 h-5" />}
                       {emailStatus === "idle" || emailStatus === "error" ? <Mail className="w-5 h-5" /> : null}
-                      {emailStatus === "sent" ? "Emailed" : "Email Draft to Compliance"}
+                      {emailStatus === "sent" ? "Notified" : "Notify Manager/RN"}
                     </button>
                     <button
                       onClick={handleApprove}
-                      disabled={isBreach || !!sirsResult.searchUnavailable}
+                      disabled={isBreach || !!sirsResult.submissionBlocked}
                       className={`font-bold py-3 px-8 rounded-xl transition-all duration-300 flex items-center gap-2 shadow-sm ${
                         isBreach
                           ? 'bg-red-50 text-red-600 border border-red-300 cursor-not-allowed opacity-90 scale-98 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
-                          : sirsResult.searchUnavailable
+                          : sirsResult.submissionBlocked
                           ? 'bg-amber-50 text-amber-700 border border-amber-300 cursor-not-allowed opacity-90'
                           : 'bg-slate-900 hover:bg-slate-800 text-white hover:shadow-md'
                       }`}
@@ -794,7 +794,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                           <Lock className="w-5 h-5 text-red-500 animate-pulse" />
                           Authorised Review Required
                         </>
-                      ) : sirsResult.searchUnavailable ? (
+                      ) : sirsResult.submissionBlocked ? (
                         <>
                           <Lock className="w-5 h-5" />
                           Manual Verification Required

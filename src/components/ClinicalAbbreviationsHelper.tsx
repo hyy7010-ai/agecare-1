@@ -94,7 +94,7 @@ const ABBREVIATIONS_DATA: Abbreviation[] = [
     meaningEn: "Mandatory incident reporting framework for Australian aged care providers under ACQSC.",
     meaningZh: "严重事件响应计划。澳洲ACQSC规定的强制性事件报告框架。",
     category: "other",
-    exampleEn: "Incident assessed against the 8 SIRS reportable categories; matched 'unreasonable use of force', Priority 1, reportable within 24h."
+    exampleEn: "Fall with head strike recorded in the facility incident management system. RN review and clinical assessment required. SIRS reportability requires assessment against one of the 8 reportable incident types."
   },
   {
     code: "ISBAR",

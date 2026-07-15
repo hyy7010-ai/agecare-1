@@ -1,8 +1,10 @@
 export interface OfflineQueueItem {
-  id: string;
+  id: string; // also used as the idempotency key when syncing to Firestore
   type: 'careNote' | 'sirsReport' | 'familyUpdate';
   data: any;
   timestamp: number;
+  retryCount: number;
+  syncStatus: 'pending' | 'failed';
 }
 
 const DB_NAME = 'AgedCareOfflineDB';
@@ -49,6 +51,8 @@ export async function addToOfflineQueue(type: OfflineQueueItem['type'], data: an
         type,
         data,
         timestamp: Date.now(),
+        retryCount: 0,
+        syncStatus: 'pending',
       };
       store.add(item);
       tx.oncomplete = () => {
@@ -98,3 +102,30 @@ export async function removeQueueItem(id: string) {
   }
 }
 
+// Marks a queue item as failed and bumps its retry counter. The item stays
+// in the queue so no data is lost; the next sync pass will retry it.
+export async function markQueueItemFailed(id: string) {
+  try {
+    const db = await getDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const item = getReq.result as OfflineQueueItem | undefined;
+        if (item) {
+          item.retryCount = (item.retryCount || 0) + 1;
+          item.syncStatus = 'failed';
+          store.put(item);
+        }
+      };
+      tx.oncomplete = () => {
+        window.dispatchEvent(new Event('offline_queue_updated'));
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.error('Failed to mark queue item as failed', e);
+  }
+}

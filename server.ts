@@ -522,11 +522,17 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       const gm = response.candidates?.[0]?.groundingMetadata;
       parsedResult.searchQueries = gm?.webSearchQueries || [];
-      parsedResult.searchUnavailable = !usedSearch;
-      if (!usedSearch) {
-        // Without live grounding the assessment is preliminary only; the UI
-        // must block filing and require manual verification against ACQSC guidance.
-        parsedResult.searchQueries = [];
+      // Grounding is only "verified" when the search tool ran AND returned
+      // at least one real source URL. Anything less is a preliminary
+      // assessment that must not proceed to authorised submission.
+      const groundingVerified = usedSearch && groundingSources.length > 0;
+      parsedResult.groundingVerified = groundingVerified;
+      parsedResult.isPreliminary = !groundingVerified;
+      parsedResult.submissionBlocked = !groundingVerified;
+      if (!groundingVerified) {
+        parsedResult.uncertaintyFlag =
+          "Live ACQSC sources could not be verified. Authorised manual review is required.";
+        parsedResult.searchQueries = usedSearch ? parsedResult.searchQueries : [];
         parsedResult.groundingSources = [];
       }
 

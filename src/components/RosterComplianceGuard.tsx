@@ -80,13 +80,19 @@ export function RosterComplianceGuard({ onBack }: RosterComplianceGuardProps) {
   const breaches = shifts.filter((shift) => shift.rnCount === 0);
   const hasRnBreach = breaches.length > 0;
 
+  // Care-minute targets come from the facility's quarterly configuration
+  // (case-mix adjusted per provider); they are not one universal statutory
+  // number for every facility and resident.
+  const facilityCareMinuteTarget = 215;
+  const facilityRnMinuteTarget = 44;
+  const targetEffectiveDate = "FY26 Q1";
+  const targetSource = "Facility quarterly care-minutes configuration";
+
   const averageCareMinutes = hasRnBreach ? 205 : 216;
-  const targetCareMinutes = 215;
-  const isCareMinutesCompliant = averageCareMinutes >= targetCareMinutes;
+  const isCareMinutesCompliant = averageCareMinutes >= facilityCareMinuteTarget;
 
   const averageRnMinutes = hasRnBreach ? 40 : 45;
-  const targetRnMinutes = 44;
-  const isRnMinutesCompliant = averageRnMinutes >= targetRnMinutes;
+  const isRnMinutesCompliant = averageRnMinutes >= facilityRnMinuteTarget;
 
   const days = [
     "Monday",
@@ -182,21 +188,21 @@ export function RosterComplianceGuard({ onBack }: RosterComplianceGuardProps) {
                       : "text-red-600 font-bold"
                   }
                 >
-                  {averageCareMinutes} / {targetCareMinutes} {t("mins")}
+                  {averageCareMinutes} / {facilityCareMinuteTarget} {t("mins")}
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${isCareMinutesCompliant ? "bg-teal-500" : "bg-red-500"}`}
                   style={{
-                    width: `${Math.min(100, (averageCareMinutes / targetCareMinutes) * 100)}%`,
+                    width: `${Math.min(100, (averageCareMinutes / facilityCareMinuteTarget) * 100)}%`,
                   }}
                 />
               </div>
               {!isCareMinutesCompliant && (
                 <p className="text-xs text-red-600 font-medium mt-2">
-                  Below mandated {targetCareMinutes} care minutes —
-                  non-compliant
+                  Below facility target of {facilityCareMinuteTarget} care
+                  minutes — review required
                 </p>
               )}
             </div>
@@ -211,23 +217,29 @@ export function RosterComplianceGuard({ onBack }: RosterComplianceGuardProps) {
                       : "text-red-600 font-bold"
                   }
                 >
-                  {averageRnMinutes} / {targetRnMinutes} {t("mins")}
+                  {averageRnMinutes} / {facilityRnMinuteTarget} {t("mins")}
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${isRnMinutesCompliant ? "bg-teal-500" : "bg-red-500"}`}
                   style={{
-                    width: `${Math.min(100, (averageRnMinutes / targetRnMinutes) * 100)}%`,
+                    width: `${Math.min(100, (averageRnMinutes / facilityRnMinuteTarget) * 100)}%`,
                   }}
                 />
               </div>
               {!isRnMinutesCompliant && (
                 <p className="text-xs text-red-600 font-medium mt-2">
-                  Below mandated {targetRnMinutes} RN minutes — non-compliant
+                  Below facility target of {facilityRnMinuteTarget} RN minutes
+                  — review required
                 </p>
               )}
             </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-slate-100">
+              Targets: {targetSource} (effective {targetEffectiveDate}).
+              Case-mix adjusted targets vary by provider and resident profile.
+            </p>
           </div>
         </div>
 
