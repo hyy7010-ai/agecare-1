@@ -1,14 +1,14 @@
 {
-  "short_name": "AgedCare AI",
-  "name": "Aged Care Smart Compliance",
+  "short_name": "Sunrise Care",
+  "name": "Sunrise Care · Aged Care Compliance",
   "icons": [
     {
-      "src": "/vite.svg",
+      "src": "/favicon.svg",
       "type": "image/svg+xml",
       "sizes": "192x192"
     },
     {
-      "src": "/vite.svg",
+      "src": "/favicon.svg",
       "type": "image/svg+xml",
       "sizes": "512x512"
     }
