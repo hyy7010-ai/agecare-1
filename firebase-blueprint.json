@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "Resident": {
+      "title": "Resident",
+      "description": "A facility resident",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "room": { "type": "string" },
+        "careMinutes": { "type": "number" },
+        "status": { "type": "string" },
+        "allergies": { "type": "array" },
+        "basicCareTasks": {
+          "type": "object",
+          "properties": {
+            "bath": { "type": "boolean" },
+            "meal": { "type": "boolean" },
+            "toilet": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["name", "room", "careMinutes", "status", "allergies", "basicCareTasks"]
+    }
+  },
+  "firestore": {
+    "residents/{residentId}": {
+      "schema": "Resident",
+      "description": "Collection of residents"
+    }
+  }
+}

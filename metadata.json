@@ -1,0 +1,11 @@
+{
+  "name": "Remix: Aged Care Smart Compliant System",
+  "description": "A responsive PWA web app for an aged care facility in Australia with Gemini-powered AI observations and SIRS reporting.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

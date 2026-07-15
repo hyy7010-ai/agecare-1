@@ -1,0 +1,4 @@
+import {mkdir} from 'node:fs/promises';import{spawnSync}from'node:child_process';import{fileURLToPath,pathToFileURL}from'node:url';import path from'node:path';
+const here=path.dirname(fileURLToPath(import.meta.url));const html=path.join(here,'competition-post.html');const out=path.join(here,'competition-output');await mkdir(out,{recursive:true});const chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const names=['封面-拦住风险','真实痛点','角色权限闭环','多语言护理记录','SIRS多模态输入','授权复核护栏','排班合规与更多功能','GoogleAI与TechForGood'];
+for(let i=0;i<names.length;i++){const r=spawnSync(chrome,['--headless=new','--hide-scrollbars','--disable-gpu','--force-device-scale-factor=2','--window-size=750,1000',`--screenshot=${path.join(out,`${i+1}-${names[i]}.png`)}`,`${pathToFileURL(html).href}?card=card${i+1}`],{encoding:'utf8'});if(r.status!==0)throw new Error(r.stderr||`export failed ${i+1}`)}console.log(`Exported ${names.length} cards to ${out}`);

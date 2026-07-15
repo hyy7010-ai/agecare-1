@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isValidResident(data) {
+      return data.keys().hasAll(['name', 'room', 'careMinutes', 'status', 'allergies', 'basicCareTasks']) &&
+             data.keys().size() == 6 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.room is string && data.room.size() <= 50 &&
+             data.careMinutes is number &&
+             data.status is string && data.status.size() <= 20 &&
+             data.allergies is list && data.allergies.size() <= 50 &&
+             (data.allergies.size() == 0 || data.allergies[0] is string) &&
+             data.basicCareTasks is map &&
+             data.basicCareTasks.keys().hasAll(['bath', 'meal', 'toilet']) &&
+             data.basicCareTasks.keys().size() == 3 &&
+             data.basicCareTasks.bath is bool &&
+             data.basicCareTasks.meal is bool &&
+             data.basicCareTasks.toilet is bool;
+    }
+
+    match /residents/{residentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidResident(incoming());
+      allow update: if isSignedIn() && isValidResident(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'room', 'careMinutes', 'status', 'allergies', 'basicCareTasks'])
+      );
+      allow delete: if isSignedIn();
+    }
+  }
+}

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小红书图文卡片 · Aged Care Copilot</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root {
+    --red: #FF2442;
+    --coral: #FF6B5E;
+    --teal: #1F6F63;
+    --teal-light: #E4F2EE;
+    --cream: #FFF8F0;
+    --ink: #2B2420;
+    --ink-soft: #6B5F56;
+    --card-shadow: 0 12px 40px rgba(43,36,32,.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #EFE9E2;
+    padding: 40px;
+    color: var(--ink);
+  }
+  .page-title { text-align: center; margin-bottom: 8px; font-size: 22px; }
+  .page-tip { text-align: center; color: var(--ink-soft); font-size: 14px; margin-bottom: 32px; }
+  .board { display: flex; flex-wrap: wrap; gap: 36px; justify-content: center; }
+  .slot { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .dl {
+    font-size: 14px; padding: 8px 20px; border-radius: 999px; border: none;
+    background: var(--red); color: #fff; cursor: pointer; font-weight: 600;
+  }
+  .dl:hover { opacity: .85; }
+
+  /* ===== 卡片基础:750 x 1000 (3:4) ===== */
+  .card {
+    width: 750px; height: 1000px;
+    background: var(--cream);
+    border-radius: 0;
+    position: relative; overflow: hidden;
+    box-shadow: var(--card-shadow);
+    display: flex; flex-direction: column;
+  }
+  .card.pop { background: linear-gradient(145deg,#FFF9F2 0%,#FFF1EA 48%,#EAF7F3 100%); }
+  .spark { position:absolute; font-size:38px; z-index:3; filter:drop-shadow(0 4px 5px rgba(43,36,32,.12)); }
+  .shot {
+    background:#fff; border:8px solid #fff; border-radius:26px; overflow:hidden;
+    box-shadow:0 18px 42px rgba(43,36,32,.18); position:relative;
+  }
+  .shot img { width:100%; height:100%; display:block; object-fit:cover; object-position:top center; }
+  .browser-top { height:28px; background:#172033; display:flex; align-items:center; gap:7px; padding:0 12px; }
+  .browser-top i { width:8px; height:8px; border-radius:50%; background:#FF6B5E; }
+  .browser-top i:nth-child(2){background:#F5C451}.browser-top i:nth-child(3){background:#58C596}
+  .sticker {
+    position:absolute; z-index:4; background:var(--red); color:#fff; border:4px solid #fff;
+    border-radius:999px; padding:10px 18px; font-size:20px; font-weight:800;
+    box-shadow:0 8px 18px rgba(255,36,66,.25); transform:rotate(-4deg);
+  }
+  .proof-row { display:flex; gap:12px; margin-top:18px; }
+  .proof { flex:1; background:#fff; border-radius:16px; padding:13px 10px; text-align:center; font-size:19px; font-weight:800; color:var(--teal); box-shadow:0 5px 15px rgba(43,36,32,.07); }
+  .micro-note { font-size:17px; line-height:1.45; color:var(--ink-soft); margin-top:12px; text-align:center; }
+  .alert-panel { margin-top:26px; background:#fff; border-radius:28px; padding:24px; border:4px solid #FF2442; box-shadow:0 18px 38px rgba(255,36,66,.18); position:relative; }
+  .alert-head { display:flex; align-items:center; gap:14px; color:#B4142D; font-size:25px; font-weight:900; }
+  .alert-icon { width:56px; height:56px; border-radius:18px; background:#FFE6EA; display:flex; align-items:center; justify-content:center; font-size:32px; }
+  .attempt { margin-top:16px; background:#F6F4F2; border-radius:16px; padding:15px 18px; font-size:20px; color:#6B5F56; }
+  .attempt b { color:#2B2420; }
+  .blocked { margin-top:12px; background:linear-gradient(135deg,#C91531,#FF2442); color:#fff; border-radius:17px; padding:17px 20px; font-size:24px; font-weight:900; display:flex; justify-content:space-between; align-items:center; }
+  .blocked small { font-size:16px; font-weight:600; opacity:.88; display:block; margin-top:3px; }
+  .human-line { margin-top:22px; font-size:25px; line-height:1.5; font-weight:700; text-align:center; }
+  .card .inner { padding: 44px 48px; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2; }
+
+  .badge {
+    display: inline-block; align-self: flex-start;
+    background: var(--red); color: #fff;
+    font-size: 22px; font-weight: 700;
+    padding: 10px 22px; border-radius: 999px;
+    letter-spacing: 1px;
+  }
+  .badge.teal { background: var(--teal); }
+
+  .brand-bar {
+    margin-top: auto; display: flex; align-items: center; gap: 14px;
+    padding-top: 20px;
+  }
+  .brand-dot {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: var(--teal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .brand-name { font-size: 22px; font-weight: 700; color: var(--teal); }
+  .brand-sub { font-size: 17px; color: var(--ink-soft); }
+
+  /* 装饰圆 */
+  .blob { position: absolute; border-radius: 50%; z-index: 1; }
+
+  /* ===== Card 1 封面 ===== */
+  #card1 .hook-small { font-size: 28px; font-weight: 600; color: var(--ink-soft); margin-top: 28px; }
+  #card1 .hook-big {
+    font-size: 68px; font-weight: 900; line-height: 1.22; margin-top: 10px;
+    letter-spacing: 2px;
+  }
+  #card1 .hook-big .hl { color: var(--red); }
+  #card1 .demo-stack { margin-top: 30px; display: flex; flex-direction: column; gap: 14px; }
+  .bubble-cn {
+    align-self: flex-start; max-width: 88%;
+    background: #fff; border: 3px solid var(--coral);
+    border-radius: 24px 24px 24px 6px;
+    padding: 18px 24px; font-size: 25px; line-height: 1.5;
+    box-shadow: 0 6px 0 rgba(255,107,94,.15);
+  }
+  .bubble-cn .mic { color: var(--coral); font-weight: 700; font-size: 20px; display: block; margin-bottom: 4px; }
+  .arrow-row { text-align: center; font-size: 32px; color: var(--teal); font-weight: 900; }
+  .arrow-row .ai-tag {
+    font-size: 20px; background: var(--teal); color: #fff;
+    border-radius: 999px; padding: 5px 16px; vertical-align: middle; margin-left: 12px; font-weight: 700;
+  }
+  .bubble-en {
+    align-self: flex-end; max-width: 92%;
+    background: var(--teal); color: #fff;
+    border-radius: 24px 24px 6px 24px;
+    padding: 18px 24px; font-size: 21px; line-height: 1.55;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  .bubble-en .tag { font-family: -apple-system, "PingFang SC", sans-serif; font-size: 19px; font-weight: 700; color: #BFE3DA; display: block; margin-bottom: 4px; }
+
+  /* ===== Card 2 痛点 ===== */
+  .card-title { font-size: 54px; font-weight: 900; line-height: 1.25; margin-top: 26px; }
+  .card-title .hl { color: var(--red); }
+  .pain-list { margin-top: 30px; display: flex; flex-direction: column; gap: 18px; }
+  .pain {
+    background: #fff; border-radius: 20px; padding: 20px 26px;
+    font-size: 26px; line-height: 1.45; font-weight: 600;
+    border-left: 10px solid var(--coral);
+    box-shadow: 0 4px 16px rgba(43,36,32,.06);
+  }
+  .pain small { display: block; font-size: 20px; color: var(--ink-soft); font-weight: 400; margin-top: 5px; }
+
+  /* ===== Card 3 演示 ===== */
+  .demo-note {
+    background: #fff; border-radius: 20px; padding: 20px 26px;
+    box-shadow: 0 4px 16px rgba(43,36,32,.06);
+  }
+  .demo-note .label { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .demo-note.cn { border: 3px dashed var(--coral); }
+  .demo-note.cn .label { color: var(--coral); }
+  .demo-note.cn .text { font-size: 26px; line-height: 1.5; }
+  .demo-note.en { background: var(--teal); color: #fff; }
+  .demo-note.en .label { color: #BFE3DA; }
+  .demo-note.en .text { font-size: 21px; line-height: 1.55; font-family: Georgia, serif; }
+  .confirm-line {
+    margin-top: 0; background: var(--teal-light); border-radius: 16px;
+    padding: 16px 22px; font-size: 22px; line-height: 1.5; color: var(--teal); font-weight: 600;
+  }
+
+  /* ===== Card 4 功能 ===== */
+  .feat-list { margin-top: 28px; display: flex; flex-direction: column; gap: 18px; }
+  .feat {
+    background: #fff; border-radius: 22px; padding: 22px 26px;
+    display: flex; gap: 20px; align-items: flex-start;
+    box-shadow: 0 4px 16px rgba(43,36,32,.06);
+  }
+  .feat .ico {
+    width: 60px; height: 60px; flex: none; border-radius: 18px;
+    background: var(--teal-light); display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+  }
+  .feat h3 { font-size: 27px; margin-bottom: 6px; }
+  .feat p { font-size: 21px; line-height: 1.5; color: var(--ink-soft); }
+
+  /* ===== Card 5 尾卡 ===== */
+  #card5 .inner { align-items: center; text-align: center; justify-content: center; }
+  #card5 .big {
+    font-size: 74px; font-weight: 900; line-height: 1.3; margin-top: 20px;
+  }
+  #card5 .big .hl { color: var(--red); }
+  #card5 .sub { font-size: 32px; color: var(--ink-soft); margin-top: 36px; line-height: 1.6; }
+  #card5 .cta {
+    margin-top: 56px; background: var(--red); color: #fff;
+    font-size: 34px; font-weight: 800; padding: 26px 60px; border-radius: 999px;
+    box-shadow: 0 10px 0 rgba(255,36,66,.18);
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">小红书图文卡片(3:4)</h1>
+<p class="page-tip">点每张卡下面的「下载 PNG」即可保存高清图(1500×2000),直接上传小红书。</p>
+
+<div class="board">
+
+  <!-- ============ 卡 1:封面 ============ -->
+  <div class="slot">
+    <div class="card pop" id="card1">
+      <div class="blob" style="width:420px;height:420px;background:rgba(255,107,94,.12);top:-140px;right:-120px;"></div>
+      <div class="blob" style="width:300px;height:300px;background:rgba(31,111,99,.10);bottom:-100px;left:-90px;"></div>
+      <div class="inner">
+        <span class="badge">澳洲 Aged Care｜真实开发记录</span>
+        <div class="hook-small">如果有人想把高风险事件“降一级”……</div>
+        <div class="hook-big" style="font-size:61px;line-height:1.17;">我做了一个<br>会<span class="hl">「踩刹车」</span>的<br>Aged Care AI</div>
+        <div class="alert-panel">
+          <div class="alert-head"><span class="alert-icon">🚨</span><span>检测到高风险事件降级操作</span></div>
+          <div class="attempt">管理人员尝试：<b>Priority 1 → Priority 2</b></div>
+          <div class="blocked"><span>🔒 提交已暂停<small>AUTHORISED REVIEW REQUIRED</small></span><span style="font-size:38px;">✕</span></div>
+          <span class="sticker" style="right:-18px;top:-20px;">想降级？先留下理由</span>
+        </div>
+        <div class="human-line">因为在护理现场，<span style="color:var(--red);">“差不多”可能就是漏报。</span></div>
+        <div class="proof-row"><div class="proof">SIRS 风险识别</div><div class="proof">合规复核门槛</div><div class="proof">保留审计记录</div></div>
+        <div class="brand-bar">
+          <div class="brand-dot">🩺</div>
+          <div>
+            <div class="brand-name">Aged Care Copilot</div>
+            <div class="brand-sub">给澳洲护理人的 AI 合规助手</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="dl" onclick="dl('card1','1-封面')">下载 PNG</button>
+  </div>
+
+  <!-- ============ 卡 2:痛点 ============ -->
+  <div class="slot">
+    <div class="card" id="card2">
+      <div class="blob" style="width:360px;height:360px;background:rgba(255,36,66,.07);top:-120px;left:-110px;"></div>
+      <div class="inner">
+        <span class="badge">这些瞬间你一定懂</span>
+        <div class="card-title">在澳洲做护理<br>最累的是<span class="hl">写 note</span>😭</div>
+        <div class="pain-list">
+          <div class="pain">🕐 干完 shift 腿都软了,还要坐下来憋半小时英文 note<small>憋出三行,还全是简单句…</small></div>
+          <div class="pain">📝 怕写得不够 professional,被 RN 打回来重写<small>"要客观、要具体、不要主观判断"</small></div>
+          <div class="pain">🚨 出了 incident,到底算不算 SIRS?要不要 24 小时内上报?<small>心里没底,只能到处问人</small></div>
+          <div class="pain">📸 发现伤口,该记 stage 几、要不要升级处理?<small>拿不准,又怕漏报担责任</small></div>
+        </div>
+        <div class="brand-bar">
+          <div class="brand-dot">🩺</div>
+          <div><div class="brand-name">Aged Care Copilot</div></div>
+        </div>
+      </div>
+    </div>
+    <button class="dl" onclick="dl('card2','2-痛点')">下载 PNG</button>
+  </div>
+
+  <!-- ============ 卡 3:演示 ============ -->
+  <div class="slot">
+    <div class="card pop" id="card3">
+      <div class="blob" style="width:380px;height:380px;background:rgba(31,111,99,.08);bottom:-130px;right:-120px;"></div>
+      <div class="inner">
+        <span class="badge teal">网站实拍｜不是概念图</span>
+        <div class="card-title">中文说，英文写<br><span class="hl">这一步真的省时间</span>✨</div>
+        <div class="shot" style="height:385px;margin-top:28px;">
+          <div class="browser-top"><i></i><i></i><i></i></div>
+          <img src="site-shots/ai-care-note.png" alt="每日护理记录生成器">
+          <span class="sticker" style="left:18px;bottom:16px;background:var(--teal);">语音 / 打字都可以</span>
+        </div>
+        <div class="confirm-line" style="margin-top:22px;">① 说出观察 → ② AI 整理英文草稿 → ③ 翻译回原语言确认 → ④ 工作人员复核提交</div>
+        <div class="micro-note">AI 是 documentation copilot，不替代 RN 临床判断</div>
+        <div class="brand-bar">
+          <div class="brand-dot">🩺</div>
+          <div><div class="brand-name">Aged Care Copilot</div></div>
+        </div>
+      </div>
+    </div>
+    <button class="dl" onclick="dl('card3','3-演示')">下载 PNG</button>
+  </div>
+
+  <!-- ============ 卡 4:更多功能 ============ -->
+  <div class="slot">
+    <div class="card pop" id="card4">
+      <div class="blob" style="width:340px;height:340px;background:rgba(255,107,94,.10);top:-110px;right:-100px;"></div>
+      <div class="inner">
+        <span class="badge teal">还有这两个实用功能</span>
+        <div class="card-title" style="font-size:48px;">不是只会写 note<br><span class="hl">incident 也能帮你梳理</span>🚨</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px;">
+          <div>
+            <div class="shot" style="height:260px;"><img src="site-shots/sirs-reporter.png" alt="SIRS 上报界面"></div>
+            <h3 style="font-size:25px;margin-top:14px;">🚨 SIRS 上报辅助</h3>
+            <p style="font-size:19px;line-height:1.5;color:var(--ink-soft);margin-top:6px;">语音、照片、文字一起整理，辅助形成上报草稿</p>
+          </div>
+          <div>
+            <div class="shot" style="height:260px;"><img src="site-shots/dashboard-viewport.png" alt="实时护理看板"></div>
+            <h3 style="font-size:25px;margin-top:14px;">📊 实时护理看板</h3>
+            <p style="font-size:19px;line-height:1.5;color:var(--ink-soft);margin-top:6px;">Carer 记录、RN 审核，班次状态一眼看清</p>
+          </div>
+        </div>
+        <div class="confirm-line" style="margin-top:24px;text-align:center;">真实界面截图｜案例资料均为模拟数据</div>
+        <div class="brand-bar">
+          <div class="brand-dot">🩺</div>
+          <div><div class="brand-name">Aged Care Copilot</div></div>
+        </div>
+      </div>
+    </div>
+    <button class="dl" onclick="dl('card4','4-功能')">下载 PNG</button>
+  </div>
+
+  <!-- ============ 卡 5:尾卡 ============ -->
+  <div class="slot">
+    <div class="card" id="card5">
+      <div class="blob" style="width:460px;height:460px;background:rgba(31,111,99,.08);top:-160px;left:-140px;"></div>
+      <div class="blob" style="width:340px;height:340px;background:rgba(255,36,66,.07);bottom:-120px;right:-110px;"></div>
+      <div class="inner">
+        <div class="big">英文不好<br>不该是姐妹们的<br><span class="hl">天花板</span>💪</div>
+        <div class="sub">你在 aged care 写 note 最头疼的是什么?<br>评论区聊聊,我们照着做功能👇</div>
+        <div class="cta">关注我,带你用 AI 减负</div>
+        <div class="brand-bar" style="margin-top:70px;">
+          <div class="brand-dot">🩺</div>
+          <div>
+            <div class="brand-name">Aged Care Copilot</div>
+            <div class="brand-sub">给澳洲护理人的 AI 合规助手</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="dl" onclick="dl('card5','5-尾卡')">下载 PNG</button>
+  </div>
+
+</div>
+
+<script>
+// 单卡模式:?card=card1 时只显示该卡,用于无头截图导出
+(() => {
+  const target = new URLSearchParams(location.search).get('card');
+  if (!target) return;
+  document.body.style.padding = '0';
+  document.body.style.background = 'transparent';
+  document.querySelector('.page-title').style.display = 'none';
+  document.querySelector('.page-tip').style.display = 'none';
+  document.querySelector('.board').style.display = 'block';
+  document.querySelectorAll('.slot').forEach(s => {
+    const isTarget = !!s.querySelector('#' + target);
+    s.style.display = isTarget ? 'block' : 'none';
+    if (isTarget) { s.querySelector('.dl').style.display = 'none'; s.querySelector('.card').style.boxShadow = 'none'; }
+  });
+})();
+
+function dl(id, name) {
+  const el = document.getElementById(id);
+  html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#FFF8F0' }).then(canvas => {
+    const a = document.createElement('a');
+    a.download = '小红书-' + name + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  });
+}
+</script>
+</body>
+</html>

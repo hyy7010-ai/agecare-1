@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Helpers ----
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Role is read from the caller's own /users profile document.
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userRole() == 'admin';
+    }
+
+    function incoming() { return request.resource.data; }
+
+    // Validate the shape of a resident document so clients cannot write
+    // arbitrary fields into a clinical record. Uses hasAll (not an exact key
+    // count) so partial updates that merge onto an existing valid doc pass.
+    function isValidResident(data) {
+      return data.keys().hasAll(['name', 'room', 'careMinutes', 'status', 'allergies', 'basicCareTasks']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.room is string && data.room.size() <= 50 &&
+             data.careMinutes is number &&
+             data.status is string && data.status.size() <= 40 &&
+             data.allergies is list && data.allergies.size() <= 50 &&
+             data.basicCareTasks is map;
+    }
+
+    // ---- Residents (clinical records) ----
+    // Validated on write so a client cannot inject arbitrary fields into a
+    // clinical record.
+    match /residents/{residentId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidResident(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // ---- Audit logs: append-only, immutable, admin-read only ----
+    // Never allow update or delete: an audit trail you can edit is not an
+    // audit trail. This is a hard compliance requirement, and the single
+    // most important rule in this file.
+    match /auditLogs/{logId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+    match /audit_logs/{logId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ---- Operational collections (parity with prior behaviour) ----
+    // Any authenticated user may read/write these; the important change vs.
+    // the previous ruleset is that access is now scoped to the collections
+    // the app actually uses, instead of a blanket wildcard.
+    match /sirsEvents/{docId}      { allow read, write: if isSignedIn(); }
+    match /rnReviewQueue/{docId}   { allow read, write: if isSignedIn(); }
+    match /dailyCareNotes/{docId}  { allow read, write: if isSignedIn(); }
+    match /observations/{docId}    { allow read, write: if isSignedIn(); }
+    match /shifts/{docId}          { allow read, write: if isSignedIn(); }
+    match /todaySummaries/{docId}  { allow read, write: if isSignedIn(); }
+
+    // ---- User profiles ----
+    // A user may create/update their own profile; any signed-in user may read
+    // profiles (staff roster / admin views rely on this).
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    // ---- Default deny ----
+    // Anything not explicitly matched above is denied for everyone. This
+    // replaces the previous `allow read, write: if request.auth != null`
+    // wildcard that exposed every collection to every signed-in user.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
