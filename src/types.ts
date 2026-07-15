@@ -61,6 +61,7 @@ export interface SIRSReport {
   uncertaintyFlag?: string;
   groundingSources?: { title: string; uri: string }[];
   searchQueries?: string[];
+  searchUnavailable?: boolean;
 }
 
 export interface SIRSAlertData {

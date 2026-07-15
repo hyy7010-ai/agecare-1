@@ -522,9 +522,12 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       const gm = response.candidates?.[0]?.groundingMetadata;
       parsedResult.searchQueries = gm?.webSearchQueries || [];
+      parsedResult.searchUnavailable = !usedSearch;
       if (!usedSearch) {
-        parsedResult.searchQueries = ["Search temporarily unavailable due to quota limit."];
-        parsedResult.groundingSources = [{ title: "Offline Fallback", uri: "#" }];
+        // Without live grounding the assessment is preliminary only; the UI
+        // must block filing and require manual verification against ACQSC guidance.
+        parsedResult.searchQueries = [];
+        parsedResult.groundingSources = [];
       }
 
       res.json({ result: parsedResult });

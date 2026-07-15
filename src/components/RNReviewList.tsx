@@ -293,11 +293,11 @@ export function RNReviewList({
                   />
                   <div className="text-xs text-slate-700 font-medium font-sans">
                     <span className="font-bold text-indigo-800 block mb-0.5">
-                      {lang === "zh" ? "✍️ 注册护士临床与法律签字确认" : "✍️ Registered Nurse Legal & Clinical Sign-off"}
+                      {lang === "zh" ? "✍️ 注册护士临床复核签字" : "✍️ Registered Nurse Clinical Sign-off"}
                     </span>
                     {lang === "zh"
-                      ? "我在此签字确认：我作为注册护士（RN），已对该 AI 辅助生成的记录进行了临床核对与必要的修正。根据《健康从业者监管国家法》，我自愿承担该病程记录入档的全部临床与法律责任。"
-                      : "I hereby sign off: As a Registered Nurse, I have clinically reviewed this AI-assisted observation and accept full clinical and legal accountability for its entry into the resident's permanent medical record under the Health Practitioner Regulation National Law."}
+                      ? "我在此签字确认：我作为注册护士（RN），已对该 AI 辅助生成的记录完成专业临床复核与必要修正，并批准其存入住民病历。机构及注册提供者依据适用法律、政策与授权承担相应责任。"
+                      : "I hereby sign off: As a Registered Nurse, I have professionally reviewed and, where necessary, amended this AI-assisted record, and I approve its entry into the resident's medical record. The facility and registered provider remain accountable in accordance with applicable law, policy and delegations."}
                   </div>
                 </label>
               </div>
