@@ -653,7 +653,10 @@ export const DashboardContainer: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Simulator Tools Bar (Top) */}
       <div className="bg-slate-800 text-white px-4 py-2 text-xs flex flex-wrap items-center justify-between z-50 relative border-b border-slate-900 shadow-sm gap-2">
-        <div className="font-bold tracking-wider uppercase text-slate-300">{t('simulator')}</div>
+        <div className="flex items-center gap-3">
+          <span className="font-bold tracking-wider uppercase text-slate-300">{t('simulator')}</span>
+          {adminViewAsSwitcher}
+        </div>
         <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => setShiftIsolation(prev => !prev)} 
@@ -701,7 +704,6 @@ export const DashboardContainer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4 sm:gap-8">
-            {adminViewAsSwitcher}
             <div className="hidden sm:block text-sm text-right">
               <span className="block font-bold text-slate-900">
                 {userProfile?.displayName}
