@@ -17,6 +17,7 @@ import {
   PendingReview,
   AIObservationResult,
   Resident,
+  UserRole,
 } from "../types";
 import { db } from "../lib/firebase";
 import { subscribeResidents, seedResidentsIfEmpty, FirestoreResident, updateBasicCareTask, updateCareMinutes, updateAdlStatuses } from "../lib/residents";
@@ -46,6 +47,8 @@ export const DashboardContainer: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<
     "dashboard" | "profile" | "sirs" | "roster" | "rnReview" | "staff" | "admin" | "sirsReview" | "platform"
   >("dashboard");
+  // Admin-only: lets a real admin inspect the app through any other role's eyes.
+  const [viewAsRole, setViewAsRole] = useState<UserRole | null>(null);
   const [selectedResidentId, setSelectedResidentId] = useState<string | null>(
     null,
   );
@@ -547,11 +550,39 @@ export const DashboardContainer: React.FC = () => {
   }
 
   // Permissions derived from Role
-  const isCaregiver = userProfile?.role === "caregiver";
-  const isRN = userProfile?.role === "rn";
-  const isManager = userProfile?.role === "manager";
-  const isAdmin = userProfile?.role === "admin";
-  const isFamily = userProfile?.role === "family";
+  const realRole = userProfile?.role;
+  const isRealAdmin = realRole === "admin";
+  // A real admin oversees the whole platform and can preview any role's view.
+  // Everyone else only ever acts as their own role.
+  const effectiveRole = isRealAdmin && viewAsRole ? viewAsRole : realRole;
+  const isCaregiver = effectiveRole === "caregiver";
+  const isRN = effectiveRole === "rn";
+  const isManager = effectiveRole === "manager";
+  const isAdmin = effectiveRole === "admin";
+  const isFamily = effectiveRole === "family";
+
+  // Admin-only role previewer. Stays visible in every previewed view (including
+  // family) so the admin can always switch back to their own view.
+  const adminViewAsSwitcher = isRealAdmin ? (
+    <div className="flex items-center gap-1.5 bg-indigo-600 text-white px-2 py-1 rounded-md shrink-0">
+      <Globe className="w-3.5 h-3.5 hidden sm:block" />
+      <span className="text-xs font-bold hidden sm:inline">{lang === "zh" ? "查看视角" : "View as"}</span>
+      <select
+        value={viewAsRole ?? "admin"}
+        onChange={(e) =>
+          setViewAsRole(e.target.value === "admin" ? null : (e.target.value as UserRole))
+        }
+        className="bg-indigo-700 text-white text-xs rounded px-1.5 py-0.5 border border-indigo-400 focus:outline-none"
+        title={lang === "zh" ? "以其他角色的视角预览(仅管理员)" : "Preview as another role (admin only)"}
+      >
+        <option value="admin">{lang === "zh" ? "管理员(本人)" : "Admin (self)"}</option>
+        <option value="manager">{lang === "zh" ? "经理" : "Manager"}</option>
+        <option value="rn">{lang === "zh" ? "注册护士 RN" : "RN"}</option>
+        <option value="caregiver">{lang === "zh" ? "护工" : "Caregiver"}</option>
+        <option value="family">{lang === "zh" ? "家属" : "Family"}</option>
+      </select>
+    </div>
+  ) : null;
 
   if (isFamily) {
     const familyResident = residents.find(r => r.name.includes("Joyce")) || (residents.length > 0 ? residents[0] : undefined);
@@ -572,7 +603,8 @@ export const DashboardContainer: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <button 
+              {adminViewAsSwitcher}
+              <button
                 onClick={toggleSimulateOffline}
                 title="Toggle Offline Mode"
                 className={`p-2 rounded-full flex items-center justify-center transition-colors ${!isOnline ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:bg-slate-100'}`}
@@ -669,12 +701,15 @@ export const DashboardContainer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4 sm:gap-8">
+            {adminViewAsSwitcher}
             <div className="hidden sm:block text-sm text-right">
               <span className="block font-bold text-slate-900">
                 {userProfile?.displayName}
               </span>
               <span className="block text-slate-500 font-medium capitalize mt-0.5">
-                {userProfile?.role}
+                {isRealAdmin && viewAsRole
+                  ? `${userProfile?.role} → ${effectiveRole}`
+                  : userProfile?.role}
               </span>
             </div>
 
@@ -772,7 +807,7 @@ export const DashboardContainer: React.FC = () => {
                 </span>
               </button>
             )}
-            {(isAdmin || isManager) && (
+            {isAdmin && (
               <button
                 onClick={() => setCurrentScreen("platform")}
                 className="flex items-center gap-1.5 sm:gap-2 bg-indigo-600 text-white border border-indigo-700 px-2 sm:px-3 py-1.5 rounded-md hover:bg-indigo-700 transition-all font-sans shrink-0 mr-2 shadow-sm"
@@ -948,7 +983,7 @@ export const DashboardContainer: React.FC = () => {
           <AdminDashboard />
         )}
 
-        {currentScreen === "platform" && (
+        {currentScreen === "platform" && isAdmin && (
           <PlatformHub onBack={() => setCurrentScreen("dashboard")} />
         )}
 
