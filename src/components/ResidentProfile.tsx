@@ -70,6 +70,7 @@ export function ResidentProfile({
   const [suggestedFollowUps, setSuggestedFollowUps] = useState<string[]>([]);
   const [careNoteError, setCareNoteError] = useState<string | null>(null);
   const [isCareNoteSaved, setIsCareNoteSaved] = useState(false);
+  const [isReadingAloud, setIsReadingAloud] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioProcessingStage, setAudioProcessingStage] = useState<number>(0);
   const [lastAudioBlob, setLastAudioBlob] = useState<Blob | null>(null);
@@ -1502,6 +1503,8 @@ export function ResidentProfile({
                         </div>
                         <button
                           onClick={async () => {
+                            if (isReadingAloud) return;
+                            setIsReadingAloud(true);
                             const targetLang = language === "zh" ? "zh-CN" : language === "tl" ? "tl-PH" : "en-US";
 
                             // Browser speechSynthesis is the fallback: its quality depends on the
@@ -1560,15 +1563,31 @@ export function ResidentProfile({
                               await audio.play();
                             } catch {
                               speakInBrowser();
+                            } finally {
+                              // Reset once playback has started (or the fallback fired), so the
+                              // spinner covers only the generation wait, not the whole clip.
+                              setIsReadingAloud(false);
                             }
                           }}
-                          className="flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors shadow-sm"
+                          disabled={isReadingAloud}
+                          className="flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
                           title="Read aloud"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.657 6.343a8 8 0 010 11.314M10.5 19.5L5 14.5H3a2 2 0 01-2-2v-3.5a2 2 0 012-2h2l5.5-5.5v16.5z" />
-                          </svg>
-                          <span className="font-medium">{t('read_back')}</span>
+                          {isReadingAloud ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.657 6.343a8 8 0 010 11.314M10.5 19.5L5 14.5H3a2 2 0 01-2-2v-3.5a2 2 0 012-2h2l5.5-5.5v16.5z" />
+                            </svg>
+                          )}
+                          <span className="font-medium">
+                            {isReadingAloud
+                              ? (language === "zh" ? "生成中…" : language === "tl" ? "Ginagawa…" : "Generating…")
+                              : t('read_back')}
+                          </span>
                         </button>
                       </div>
                       <p className="text-indigo-800 leading-relaxed mt-2">
