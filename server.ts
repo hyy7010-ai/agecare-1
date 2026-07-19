@@ -421,6 +421,8 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
         - confidenceScore: number (0 to 100, how confident are you in this classification based on the latest guidelines)
         - uncertaintyFlag: string (If confidence is < 90, explain what is unclear and why an RN needs to review. If confident, return an empty string)
 
+        CRITICAL LANGUAGE INSTRUCTION: Write ALL human-readable string values in the language corresponding to language code: ${language}. This applies to category, incidentTitle, uncertaintyFlag, and every string inside autofillReport (whatHappened, immediateSafetyActions, regulatorNotification, preventiveActions). The JSON keys, boolean/number values, and residentName must stay unchanged. Do NOT translate the searchQueries (they are real Google Search queries and must remain in English). If the language code is "en", write everything in English as usual.
+
         CRITICAL FORMATTING INSTRUCTION:
         You MUST output a detailed thought process about the current SIRS guidelines based on your search, and then AT THE VERY END, output exactly one JSON block wrapped in \`\`\`json ... \`\`\` with your final structured answer using the requested keys.
       `;

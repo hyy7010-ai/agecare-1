@@ -27,6 +27,151 @@ import { scrubPII } from "../lib/piiScrubber";
 import { submitSirsEvent } from "../lib/localReviewQueue";
 import { CountdownTimer } from "./CountdownTimer";
 
+// Page-local translations. This component predates the app's i18n system, so it
+// carries its own dictionary rather than adding ~55 keys to LanguageContext.
+const SIRS_I18N: Record<string, Record<string, string>> = {
+  en: {
+    cancelBack: "Cancel & Back",
+    title: "SIRS Incident Reporter",
+    subtitle: "AI-assisted reporting for the Serious Incident Response Scheme",
+    analyzing: "Gemini is checking compliance criteria and drafting a report.",
+    savedOffline: "Saved Offline",
+    savedOfflineDesc: "The report has been saved locally and will be analyzed when your connection is restored.",
+    returnDashboard: "Return to Dashboard",
+    recordVoice: "Record Voice Note",
+    startRecording: "Start Recording",
+    stopRecording: "Stop Recording",
+    audioAttached: "Audio Attached",
+    attachPhoto: "Attach Photo",
+    takePhoto: "Take / Select Photo",
+    narrative: "Narrative Description (Optional if using Voice/Photo)",
+    simulateTagalog: "Simulate Tagalog Text",
+    narrativePlaceholder: "E.g., Mr. Chen slipped in the bathroom and his arm has a graze... (Or just record voice instead)",
+    errorLabel: "Error:",
+    analyzeCompliance: "Analyze Compliance",
+    preparingPack: "Preparing SIRS Submission Pack...",
+    preparingPackDesc: "Compiling the draft and sending an internal notification to the Manager/RN via Gmail API.",
+    packPrepared: "SIRS Submission Pack Prepared",
+    packPreparedDesc1: "A draft has been prepared for authorised submission through the My Aged Care Service and Support Portal within the mandatory",
+    windowP1: "24-hour",
+    windowP2: "30-day",
+    packPreparedDesc2: "window.",
+    internalNotice: "Internal notification sent to the Manager/RN via Gmail API. The official SIRS notice must be submitted by an authorised person through the My Aged Care Service and Support Portal.",
+    ccText: "the resident's GP and family contact",
+    whatHappened: "What Happened",
+    immediateSafety: "Immediate Safety Actions",
+    regulatorNotification: "Regulator Notification",
+    reportRequiredA: "SIRS Priority",
+    reportRequiredB: "Report Required",
+    matchedCategory: "Matched Category:",
+    aiConfidence: "AI Confidence:",
+    aiUncertainty: "AI Uncertainty:",
+    verifiedSearch: "Verified via live Google Search",
+    searchDesc: "The AI ran these searches against current ACQSC guidelines before classifying:",
+    sourcesReferenced: "Sources Referenced",
+    officialReference: "Official reference: ACQSC Serious Incident Response Scheme",
+    rnOverride: "RN Override Priority",
+    rnOverrideDesc: "Manual override of AI classification",
+    keepAi: "Keep AI Suggestion",
+    upgradeP1: "Upgrade to Priority 1",
+    downgradeP2: "Downgrade to Priority 2",
+    markNonReportable: "Mark as Non-Reportable",
+    actReviewTitle: "AGED CARE ACT 2024 - AUTHORISED REVIEW REQUIRED",
+    actReviewDesc: "Compliance review gate: AI has flagged this reportable incident as potentially Priority 1 under current ACQSC guidance. A downgrade cannot be submitted through this screen until an authorised reviewer records the supporting evidence and rationale. AI provides decision support; the registered provider remains responsible for the final assessment.",
+    autoReportDraft: "Auto-Generated Report Draft",
+    notificationsCheck: "Notifications Check",
+    emergencyServices: "Emergency Services",
+    familyNotified: "Family Notified",
+    gpNotified: "GP Notified",
+    yes: "Yes",
+    no: "No",
+    liveUnavailable: "⚠️ Live ACQSC verification unavailable.",
+    liveUnavailableDesc: "This preliminary assessment cannot be used for submission. Please verify against the official ACQSC guidance.",
+    notified: "Notified",
+    notifyManager: "Notify Manager/RN",
+    authorisedReview: "Authorised Review Required",
+    manualVerification: "Manual Verification Required",
+    approveFile: "Manager Approve & File",
+    draftedEmail: "Drafted Email Content",
+    sendViaEmail: "Send via Email Client",
+    emailFailed: "Email failed:",
+    complianceReminder: "Compliance reminder:",
+    complianceReminderDesc: "Registered providers must notify Priority 1 SIRS incidents within 24 hours and Priority 2 incidents within 30 calendar days. This AI output is decision support and must be reviewed against current ACQSC guidance and the provider's incident-management process.",
+    notReportable: "Not SIRS Reportable",
+    notReportableDesc: "Based on the SIRS criteria, this incident does not meet the threshold for mandatory ACQSC reporting. Please log it in your internal clinical management system.",
+  },
+  zh: {
+    cancelBack: "取消并返回",
+    title: "SIRS 事件上报器",
+    subtitle: "AI 辅助的严重事件应对方案(SIRS)上报",
+    analyzing: "Gemini 正在核对合规标准并起草报告。",
+    savedOffline: "已离线保存",
+    savedOfflineDesc: "报告已本地保存,恢复网络后将自动分析。",
+    returnDashboard: "返回仪表板",
+    recordVoice: "录制语音",
+    startRecording: "开始录音",
+    stopRecording: "停止录音",
+    audioAttached: "已附语音",
+    attachPhoto: "附加照片",
+    takePhoto: "拍摄 / 选择照片",
+    narrative: "事件描述(若已用语音/照片则可选)",
+    simulateTagalog: "模拟他加禄语示例",
+    narrativePlaceholder: "例如:陈先生在浴室滑倒,手臂擦伤……(也可以直接录语音)",
+    errorLabel: "错误:",
+    analyzeCompliance: "分析合规性",
+    preparingPack: "正在准备 SIRS 上报材料……",
+    preparingPackDesc: "正在汇编草稿,并通过 Gmail API 向经理/护士发送内部通知。",
+    packPrepared: "SIRS 上报材料已准备",
+    packPreparedDesc1: "已生成草稿,供授权人员在法定的",
+    windowP1: "24 小时",
+    windowP2: "30 天",
+    packPreparedDesc2: "时限内通过 My Aged Care 服务与支持门户正式提交。",
+    internalNotice: "已通过 Gmail API 向经理/护士发送内部通知。正式的 SIRS 通报仍须由授权人员通过 My Aged Care 服务与支持门户提交。",
+    ccText: "该长者的全科医生(GP)及家属联系人",
+    whatHappened: "事件经过",
+    immediateSafety: "即时安全措施",
+    regulatorNotification: "监管机构通报",
+    reportRequiredA: "需上报 SIRS 优先级",
+    reportRequiredB: "报告",
+    matchedCategory: "匹配类别:",
+    aiConfidence: "AI 置信度:",
+    aiUncertainty: "AI 不确定性:",
+    verifiedSearch: "已通过实时 Google 搜索核实",
+    searchDesc: "AI 在分类前对照当前 ACQSC 指南执行了以下搜索:",
+    sourcesReferenced: "引用来源",
+    officialReference: "官方参考:ACQSC 严重事件应对方案",
+    rnOverride: "护士(RN)手动调整优先级",
+    rnOverrideDesc: "手动覆盖 AI 的分类",
+    keepAi: "保留 AI 建议",
+    upgradeP1: "升级为优先级 1",
+    downgradeP2: "降级为优先级 2",
+    markNonReportable: "标记为无需上报",
+    actReviewTitle: "《2024 安老法》——需授权复核",
+    actReviewDesc: "合规复核关卡:AI 依据当前 ACQSC 指南将该可上报事件标记为可能的优先级 1。在授权复核人记录支持证据与理由之前,不能在本界面提交降级。AI 仅提供决策支持;最终判定责任仍在注册服务方。",
+    autoReportDraft: "自动生成的报告草稿",
+    notificationsCheck: "通报情况核对",
+    emergencyServices: "紧急服务",
+    familyNotified: "已通知家属",
+    gpNotified: "已通知全科医生(GP)",
+    yes: "是",
+    no: "否",
+    liveUnavailable: "⚠️ 实时 ACQSC 核实不可用。",
+    liveUnavailableDesc: "该初步评估不能用于正式提交。请对照官方 ACQSC 指南核实。",
+    notified: "已通知",
+    notifyManager: "通知经理/护士",
+    authorisedReview: "需授权复核",
+    manualVerification: "需人工核实",
+    approveFile: "经理审批并归档",
+    draftedEmail: "邮件草稿内容",
+    sendViaEmail: "用邮件客户端发送",
+    emailFailed: "邮件发送失败:",
+    complianceReminder: "合规提醒:",
+    complianceReminderDesc: "注册服务方须在 24 小时内通报优先级 1 的 SIRS 事件、在 30 个日历日内通报优先级 2 事件。此 AI 输出为决策支持,须对照当前 ACQSC 指南及服务方的事件管理流程进行复核。",
+    notReportable: "无需 SIRS 上报",
+    notReportableDesc: "根据 SIRS 标准,该事件未达到强制向 ACQSC 上报的门槛。请在内部临床管理系统中登记。",
+  },
+};
+
 interface SirsReporterProps {
   onCancel: () => void;
   onSubmit: (data: SIRSAlertData) => void;
@@ -38,6 +183,7 @@ interface SirsReporterProps {
 export function SirsReporter({ onCancel, onSubmit, initialDescription = "", initialSirsResult = null, residentName = "Unknown" }: SirsReporterProps) {
   const { currentUser } = useAuth();
   const { isOnline, lang: language } = useLanguage();
+  const L = SIRS_I18N[language] || SIRS_I18N.en;
   const [description, setDescription] = useState(initialDescription);
   const [draftEmail, setDraftEmail] = useState<{subject: string, body: string, to: string} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -300,16 +446,16 @@ ${sirsResult.autofillReport.regulatorNotification}
         className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors mb-6 font-medium"
       >
         <ArrowLeft className="w-5 h-5" />
-        Cancel & Back
+        {L.cancelBack}
       </button>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-slate-900 px-6 py-6 text-white flex items-center gap-4">
           <ShieldAlert className="w-8 h-8 text-red-500" />
           <div>
-            <h1 className="text-2xl font-bold">SIRS Incident Reporter</h1>
+            <h1 className="text-2xl font-bold">{L.title}</h1>
             <p className="text-slate-400">
-              AI-assisted reporting for the Serious Incident Response Scheme
+              {L.subtitle}
             </p>
           </div>
         </div>
@@ -340,7 +486,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                     <CountdownTimer />
                   </h3>
                   <p className="text-slate-400 mt-2">
-                    Gemini is checking compliance criteria and drafting a report.
+                    {L.analyzing}
                   </p>
                 </div>
               )}
@@ -352,10 +498,10 @@ ${sirsResult.autofillReport.regulatorNotification}
                   <CheckCircle className="w-10 h-10 text-amber-600" />
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">
-                  Saved Offline
+                  {L.savedOffline}
                 </h2>
                 <p className="text-amber-700 font-medium">
-                  The report has been saved locally and will be analyzed when your connection is restored.
+                  {L.savedOfflineDesc}
                 </p>
               </div>
               <div className="flex justify-center mt-8">
@@ -363,7 +509,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                   onClick={onCancel}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-8 rounded-xl transition-colors"
                 >
-                  Return to Dashboard
+                  {L.returnDashboard}
                 </button>
               </div>
             </div>
@@ -374,7 +520,7 @@ ${sirsResult.autofillReport.regulatorNotification}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-                    Record Voice Note
+                    {L.recordVoice}
                   </label>
                   <div className="flex items-center gap-2">
                     {!isRecording ? (
@@ -382,19 +528,19 @@ ${sirsResult.autofillReport.regulatorNotification}
                         onClick={startRecording}
                         className="bg-red-50 hover:bg-red-100 text-red-600 font-medium py-2 px-4 rounded-xl transition-colors flex items-center gap-2 text-sm border border-red-200"
                       >
-                        <Mic className="w-4 h-4" /> Start Recording
+                        <Mic className="w-4 h-4" /> {L.startRecording}
                       </button>
                     ) : (
                       <button
                         onClick={stopRecording}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl transition-colors flex items-center gap-2 text-sm animate-pulse"
                       >
-                        <MicOff className="w-4 h-4" /> Stop Recording
+                        <MicOff className="w-4 h-4" /> {L.stopRecording}
                       </button>
                     )}
                     {audioBase64 && !isRecording && (
                       <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
-                        <CheckCircle className="w-4 h-4" /> Audio Attached
+                        <CheckCircle className="w-4 h-4" /> {L.audioAttached}
                         <button onClick={() => setAudioBase64(null)} className="ml-2 hover:text-emerald-800">
                           <X className="w-4 h-4" />
                         </button>
@@ -407,7 +553,7 @@ ${sirsResult.autofillReport.regulatorNotification}
 
                 <div className="flex-1">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-                    Attach Photo
+                    {L.attachPhoto}
                   </label>
                   <div className="flex items-center gap-2">
                     <input 
@@ -421,7 +567,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                       onClick={() => fileInputRef.current?.click()}
                       className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-xl transition-colors flex items-center gap-2 text-sm border border-slate-300"
                     >
-                      <Camera className="w-4 h-4" /> Take / Select Photo
+                      <Camera className="w-4 h-4" /> {L.takePhoto}
                     </button>
                   </div>
                   {imageBase64 && (
@@ -441,18 +587,18 @@ ${sirsResult.autofillReport.regulatorNotification}
               <div>
                 <div className="flex justify-between items-end mb-2">
                   <label className="block text-sm font-bold text-slate-700 uppercase">
-                    Narrative Description (Optional if using Voice/Photo)
+                    {L.narrative}
                   </label>
                   <button 
                     onClick={() => setDescription("Nakita kong itinulak ng isang staff member si Mr. Chen habang tinutulungan siyang tumayo. Natumba siya at nasugatan ang kanyang braso. Sinuri siya ng RN at kinailangang gamutin ang sugat. Ipinaalam ko agad ito sa manager.")}
                     className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded"
                   >
-                    <Mic className="w-3 h-3" /> Simulate Tagalog Text
+                    <Mic className="w-3 h-3" /> {L.simulateTagalog}
                   </button>
                 </div>
                 <textarea
                   className="w-full border border-slate-300 rounded-xl p-4 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
-                  placeholder="E.g., Mr. Chen slipped in the bathroom and his arm has a graze... (Or just record voice instead)"
+                  placeholder={L.narrativePlaceholder}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -460,7 +606,7 @@ ${sirsResult.autofillReport.regulatorNotification}
 
               {errorMsg && (
                 <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded-xl text-sm mb-4">
-                  <strong>Error: </strong> {errorMsg}
+                  <strong>{L.errorLabel} </strong> {errorMsg}
                 </div>
               )}
 
@@ -470,7 +616,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                   disabled={!description.trim() && !audioBase64 && !imageBase64}
                   className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2"
                 >
-                  <Cpu className="w-5 h-5" /> Analyze Compliance
+                  <Cpu className="w-5 h-5" /> {L.analyzeCompliance}
                 </button>
               </div>
             </div>
@@ -478,10 +624,10 @@ ${sirsResult.autofillReport.regulatorNotification}
             <div className="h-64 border border-slate-200 rounded-2xl bg-slate-50 p-10 flex flex-col items-center justify-center text-center animate-in fade-in">
               <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
               <h3 className="text-xl font-bold text-slate-800">
-                Preparing SIRS Submission Pack...
+                {L.preparingPack}
               </h3>
               <p className="text-slate-500 mt-2">
-                Compiling the draft and sending an internal notification to the Manager/RN via Gmail API.
+                {L.preparingPackDesc}
               </p>
             </div>
           ) : isSubmitted && sirsResult ? (
@@ -491,12 +637,12 @@ ${sirsResult.autofillReport.regulatorNotification}
                   <CheckCircle className="w-10 h-10 text-emerald-600" />
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">
-                  SIRS Submission Pack Prepared <span>&#10003;</span>
+                  {L.packPrepared} <span>&#10003;</span>
                 </h2>
                 <p className="text-emerald-700 font-medium">
-                  A draft has been prepared for authorised submission through
-                  the My Aged Care Service and Support Portal within the
-                  mandatory {sirsResult.priority === 1 ? "24-hour" : "30-day"} window.
+                  {L.packPreparedDesc1}{" "}
+                  {sirsResult.priority === 1 ? L.windowP1 : L.windowP2}{" "}
+                  {L.packPreparedDesc2}
                 </p>
               </div>
 
@@ -504,9 +650,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                 <div className="flex items-center gap-2 mb-4 text-slate-500 text-sm border-b border-slate-200 pb-4">
                   <Send className="w-4 h-4" />
                   <span>
-                    Internal notification sent to the Manager/RN via Gmail API.
-                    The official SIRS notice must be submitted by an authorised
-                    person through the My Aged Care Service and Support Portal.
+                    {L.internalNotice}
                   </span>
                 </div>
 
@@ -516,8 +660,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                     compliance@sunrisecare.com.au
                   </div>
                   <div>
-                    <span className="text-slate-400">CC:</span> the resident's
-                    GP and family contact
+                    <span className="text-slate-400">CC:</span> {L.ccText}
                   </div>
                   <div>
                     <span className="text-slate-400">Subject:</span> SIRS
@@ -527,17 +670,17 @@ ${sirsResult.autofillReport.regulatorNotification}
 
                 <div className="space-y-4 text-sm text-slate-800">
                   <p>
-                    <strong>What Happened:</strong>
+                    <strong>{L.whatHappened}:</strong>
                     <br />
                     {sirsResult.autofillReport.whatHappened}
                   </p>
                   <p>
-                    <strong>Immediate Safety Actions:</strong>
+                    <strong>{L.immediateSafety}:</strong>
                     <br />
                     {sirsResult.autofillReport.immediateSafetyActions}
                   </p>
                   <p>
-                    <strong>Regulator Notification:</strong>
+                    <strong>{L.regulatorNotification}:</strong>
                     <br />
                     {sirsResult.autofillReport.regulatorNotification}
                   </p>
@@ -549,7 +692,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                   onClick={handleFinish}
                   className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-xl transition-colors"
                 >
-                  Return to Dashboard
+                  {L.returnDashboard}
                 </button>
               </div>
             </div>
@@ -569,23 +712,23 @@ ${sirsResult.autofillReport.regulatorNotification}
                       <h2
                         className={`text-2xl font-bold ${sirsResult.priority === 1 ? "text-white" : "text-amber-900"}`}
                       >
-                        SIRS Priority {sirsResult.priority} Report Required
+                        {L.reportRequiredA} {sirsResult.priority} {L.reportRequiredB}
                       </h2>
                     </div>
                     <p
                       className={`${sirsResult.priority === 1 ? "text-red-100" : "text-amber-700"} font-medium text-lg`}
                     >
-                      Matched Category: {sirsResult.category}
+                      {L.matchedCategory} {sirsResult.category}
                     </p>
                     
                     {sirsResult.confidenceScore && (
                       <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${sirsResult.confidenceScore < 70 ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                        AI Confidence: {sirsResult.confidenceScore}%
+                        {L.aiConfidence} {sirsResult.confidenceScore}%
                       </div>
                     )}
                     {sirsResult.uncertaintyFlag && (
                       <div className="mt-3 bg-white/20 p-3 rounded-lg text-sm">
-                        <strong>AI Uncertainty:</strong> {sirsResult.uncertaintyFlag}
+                        <strong>{L.aiUncertainty}</strong> {sirsResult.uncertaintyFlag}
                       </div>
                     )}
                   </div>
@@ -594,9 +737,9 @@ ${sirsResult.autofillReport.regulatorNotification}
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-1 text-slate-700">
                         <Search className="w-5 h-5 text-indigo-500" />
-                        <h4 className="font-bold text-sm">Verified via live Google Search</h4>
+                        <h4 className="font-bold text-sm">{L.verifiedSearch}</h4>
                       </div>
-                      <p className="text-xs text-slate-500 mb-4">The AI ran these searches against current ACQSC guidelines before classifying:</p>
+                      <p className="text-xs text-slate-500 mb-4">{L.searchDesc}</p>
                       
                       <div className="space-y-2 mb-4">
                         {sirsResult.searchQueries?.map((query, idx) => (
@@ -609,7 +752,7 @@ ${sirsResult.autofillReport.regulatorNotification}
 
                       {sirsResult.groundingSources && sirsResult.groundingSources.length > 0 && (
                         <div className="space-y-3 mb-4 pt-4 border-t border-slate-200">
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sources Referenced</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{L.sourcesReferenced}</p>
                           {sirsResult.groundingSources.map((source, idx) => {
                             let domain = '';
                             try {
@@ -646,7 +789,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                           className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
                         >
                           <Globe className="w-3.5 h-3.5" />
-                          Official reference: ACQSC Serious Incident Response Scheme
+                          {L.officialReference}
                         </a>
                       </div>
                     </div>
@@ -655,18 +798,18 @@ ${sirsResult.autofillReport.regulatorNotification}
                   {/* Override Section */}
                   <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-sm text-slate-800">RN Override Priority</h4>
-                      <p className="text-xs text-slate-500">Manual override of AI classification</p>
+                      <h4 className="font-bold text-sm text-slate-800">{L.rnOverride}</h4>
+                      <p className="text-xs text-slate-500">{L.rnOverrideDesc}</p>
                     </div>
                     <select 
                       className="border border-slate-300 rounded p-2 text-sm"
                       value={overridePriority === null ? '' : overridePriority}
                       onChange={(e) => setOverridePriority(e.target.value ? (e.target.value === 'none' ? 'none' : Number(e.target.value)) : null)}
                     >
-                      <option value="">Keep AI Suggestion (P{sirsResult.priority})</option>
-                      {sirsResult.priority !== 1 && <option value="1">Upgrade to Priority 1</option>}
-                      {sirsResult.priority !== 2 && <option value="2">Downgrade to Priority 2</option>}
-                      <option value="none">Mark as Non-Reportable</option>
+                      <option value="">{L.keepAi} (P{sirsResult.priority})</option>
+                      {sirsResult.priority !== 1 && <option value="1">{L.upgradeP1}</option>}
+                      {sirsResult.priority !== 2 && <option value="2">{L.downgradeP2}</option>}
+                      <option value="none">{L.markNonReportable}</option>
                     </select>
                   </div>
 
@@ -674,22 +817,22 @@ ${sirsResult.autofillReport.regulatorNotification}
                     <div className="bg-red-50 border-l-4 border-red-600 p-5 rounded-r-xl shadow-sm animate-in slide-in-from-top-2">
                       <div className="flex items-center gap-2 text-red-800 font-bold mb-2">
                         <ShieldAlert className="w-6 h-6 animate-pulse" />
-                        AGED CARE ACT 2024 - AUTHORISED REVIEW REQUIRED
+                        {L.actReviewTitle}
                       </div>
                       <p className="text-sm text-red-700 font-medium leading-relaxed">
-                        Compliance review gate: AI has flagged this reportable incident as potentially Priority 1 under current ACQSC guidance. A downgrade cannot be submitted through this screen until an authorised reviewer records the supporting evidence and rationale. AI provides decision support; the registered provider remains responsible for the final assessment.
+                        {L.actReviewDesc}
                       </p>
                     </div>
                   )}
 
                   <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
                     <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2">
-                      Auto-Generated Report Draft
+                      {L.autoReportDraft}
                     </h3>
 
                     <div>
                       <span className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        What Happened
+                        {L.whatHappened}
                       </span>
                       <p className="text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                         {sirsResult.autofillReport.whatHappened}
@@ -697,7 +840,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                     </div>
                     <div>
                       <span className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        Immediate Safety Actions
+                        {L.immediateSafety}
                       </span>
                       <p className="text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                         {sirsResult.autofillReport.immediateSafetyActions}
@@ -707,7 +850,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <span className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                          Regulator Notification
+                          {L.regulatorNotification}
                         </span>
                         <p className="text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                           {sirsResult.autofillReport.regulatorNotification}
@@ -715,12 +858,12 @@ ${sirsResult.autofillReport.regulatorNotification}
                       </div>
                       <div>
                         <span className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                          Notifications Check
+                          {L.notificationsCheck}
                         </span>
                         <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2 text-sm">
                           <div className="flex items-center justify-between">
                             <span className="text-slate-600">
-                              Emergency Services
+                              {L.emergencyServices}
                             </span>
                             <span
                               className={
@@ -732,13 +875,13 @@ ${sirsResult.autofillReport.regulatorNotification}
                             >
                               {sirsResult.autofillReport
                                 .emergencyServicesNotified
-                                ? "Yes"
-                                : "No"}
+                                ? L.yes
+                                : L.no}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-slate-600">
-                              Family Notified
+                              {L.familyNotified}
                             </span>
                             <span
                               className={
@@ -748,12 +891,12 @@ ${sirsResult.autofillReport.regulatorNotification}
                               }
                             >
                               {sirsResult.autofillReport.familyNotified
-                                ? "Yes"
-                                : "No"}
+                                ? L.yes
+                                : L.no}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-600">GP Notified</span>
+                            <span className="text-slate-600">{L.gpNotified}</span>
                             <span
                               className={
                                 sirsResult.autofillReport.gpNotified
@@ -762,8 +905,8 @@ ${sirsResult.autofillReport.regulatorNotification}
                               }
                             >
                               {sirsResult.autofillReport.gpNotified
-                                ? "Yes"
-                                : "No"}
+                                ? L.yes
+                                : L.no}
                             </span>
                           </div>
                         </div>
@@ -773,9 +916,8 @@ ${sirsResult.autofillReport.regulatorNotification}
 
                   {sirsResult.submissionBlocked && (
                     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-sm text-amber-800">
-                      <strong>⚠️ Live ACQSC verification unavailable.</strong>{" "}
-                      This preliminary assessment cannot be used for submission.
-                      Please verify against the official ACQSC guidance.
+                      <strong>{L.liveUnavailable}</strong>{" "}
+                      {L.liveUnavailableDesc}
                     </div>
                   )}
                   <div className="flex justify-end pt-4 gap-4">
@@ -787,7 +929,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                       {emailStatus === "sending" && <Loader2 className="w-5 h-5 animate-spin" />}
                       {emailStatus === "sent" && <CheckCircle className="w-5 h-5" />}
                       {emailStatus === "idle" || emailStatus === "error" ? <Mail className="w-5 h-5" /> : null}
-                      {emailStatus === "sent" ? "Notified" : "Notify Manager/RN"}
+                      {emailStatus === "sent" ? L.notified : L.notifyManager}
                     </button>
                     <button
                       onClick={handleApprove}
@@ -803,16 +945,16 @@ ${sirsResult.autofillReport.regulatorNotification}
                       {isBreach ? (
                         <>
                           <Lock className="w-5 h-5 text-red-500 animate-pulse" />
-                          Authorised Review Required
+                          {L.authorisedReview}
                         </>
                       ) : sirsResult.submissionBlocked ? (
                         <>
                           <Lock className="w-5 h-5" />
-                          Manual Verification Required
+                          {L.manualVerification}
                         </>
                       ) : (
                         <>
-                          Manager Approve & File
+                          {L.approveFile}
                           <Send className="w-5 h-5 ml-2" />
                         </>
                       )}
@@ -823,7 +965,7 @@ ${sirsResult.autofillReport.regulatorNotification}
                     <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-6 text-left">
                       <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                         <Mail className="w-4 h-4" />
-                        Drafted Email Content
+                        {L.draftedEmail}
                       </h4>
                       <div className="space-y-2 mb-4 text-sm bg-white p-4 rounded-lg border border-slate-200">
                         <p><span className="font-semibold text-slate-500">To:</span> {draftEmail.to}</p>
@@ -836,21 +978,21 @@ ${sirsResult.autofillReport.regulatorNotification}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
                       >
                         <Send className="w-4 h-4" />
-                        Send via Email Client
+                        {L.sendViaEmail}
                       </a>
                     </div>
                   )}
                   
                   {emailError && (
                     <div className="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-                      <strong>Email failed:</strong> {emailError}
+                      <strong>{L.emailFailed}</strong> {emailError}
                     </div>
                   )}
 
                   <div className="mt-4 bg-red-50 border border-red-200 p-4 rounded-xl text-sm text-red-800 flex items-start gap-3">
                     <ShieldAlert className="w-5 h-5 mt-0.5 shrink-0 text-red-600" />
                     <div>
-                      <strong>Compliance reminder:</strong> Registered providers must notify Priority 1 SIRS incidents within 24 hours and Priority 2 incidents within 30 calendar days. This AI output is decision support and must be reviewed against current ACQSC guidance and the provider's incident-management process.
+                      <strong>{L.complianceReminder}</strong> {L.complianceReminderDesc}
                     </div>
                   </div>
                 </div>
@@ -858,18 +1000,16 @@ ${sirsResult.autofillReport.regulatorNotification}
                 <div className="bg-emerald-50 border border-emerald-200 p-8 rounded-xl text-center">
                   <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold text-emerald-900 mb-2">
-                    Not SIRS Reportable
+                    {L.notReportable}
                   </h2>
                   <p className="text-emerald-700">
-                    Based on the SIRS criteria, this incident does not meet the
-                    threshold for mandatory ACQSC reporting. Please log it in
-                    your internal clinical management system.
+                    {L.notReportableDesc}
                   </p>
                   <button
                     onClick={onCancel}
                     className="mt-6 bg-white border border-emerald-300 text-emerald-800 font-bold py-2 px-6 rounded-lg transition-colors hover:bg-emerald-100"
                   >
-                    Return to Dashboard
+                    {L.returnDashboard}
                   </button>
                 </div>
               )}
