@@ -1501,11 +1501,66 @@ export function ResidentProfile({
                           <CheckCircle className="w-4 h-4" /> {t('native_translation_confirmation')}
                         </div>
                         <button
-                          onClick={() => {
-                            const utterance = new SpeechSynthesisUtterance(nativeConfirmation);
-                            utterance.lang = language === "zh" ? "zh-CN" : language === "tl" ? "tl-PH" : "en-US";
-                            window.speechSynthesis.cancel();
-                            window.speechSynthesis.speak(utterance);
+                          onClick={async () => {
+                            const targetLang = language === "zh" ? "zh-CN" : language === "tl" ? "tl-PH" : "en-US";
+
+                            // Browser speechSynthesis is the fallback: its quality depends on the
+                            // device's installed voices (robotic/muffled Chinese, no Tagalog at all),
+                            // so it's only used if Azure TTS is unavailable.
+                            const speakInBrowser = () => {
+                              const pickNaturalVoice = (voices: SpeechSynthesisVoice[]) => {
+                                // macOS ships novelty voices (Whisper, Zarvox, Bells...) that sound eerie — never use them.
+                                const novelty = /whisper|zarvox|bells|organ|trinoids|boing|bubbles|cellos|jester|bahh|wobble|superstar|bad news|good news|albert|fred|ralph|junior|princess|kathy|deranged|hysterical|bruce|agnes/i;
+                                const preferred = /natural|neural|google|siri|premium|enhanced/i;
+                                const usable = voices.filter(v => !novelty.test(v.name));
+                                const bestInLang = (langCode: string) => {
+                                  const prefix = langCode.split("-")[0];
+                                  const inLang = usable.filter(v => v.lang.startsWith(prefix));
+                                  return (
+                                    inLang.find(v => preferred.test(v.name)) ||
+                                    inLang.find(v => v.lang === langCode) ||
+                                    inLang[0]
+                                  );
+                                };
+                                // Fall back to the best English voice when the language has no local voice.
+                                return bestInLang(targetLang) || bestInLang("en-US") || usable[0];
+                              };
+                              const speak = () => {
+                                const utterance = new SpeechSynthesisUtterance(nativeConfirmation);
+                                utterance.lang = targetLang;
+                                const voice = pickNaturalVoice(window.speechSynthesis.getVoices());
+                                if (voice) utterance.voice = voice;
+                                utterance.rate = 0.95;
+                                utterance.pitch = 1;
+                                window.speechSynthesis.cancel();
+                                window.speechSynthesis.speak(utterance);
+                              };
+                              if (window.speechSynthesis.getVoices().length === 0) {
+                                window.speechSynthesis.addEventListener("voiceschanged", speak, { once: true });
+                              } else {
+                                speak();
+                              }
+                            };
+
+                            // Prefer Azure Neural TTS (consistent human quality on every device).
+                            try {
+                              const res = await fetch("/api/tts", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ text: nativeConfirmation, language }),
+                              });
+                              if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
+                                throw new Error("tts unavailable");
+                              }
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const audio = new Audio(url);
+                              audio.onended = () => URL.revokeObjectURL(url);
+                              window.speechSynthesis.cancel();
+                              await audio.play();
+                            } catch {
+                              speakInBrowser();
+                            }
                           }}
                           className="flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors shadow-sm"
                           title="Read aloud"

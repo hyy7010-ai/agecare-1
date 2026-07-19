@@ -848,6 +848,77 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     }
   });
 
+  // API Route: Text-to-Speech (Gemini native TTS, reuses GEMINI_API_KEY)
+  // Browser speechSynthesis quality depends entirely on which voices the carer's
+  // device happens to have, which is unreliable in the field (robotic/muffled
+  // Chinese, no Tagalog voice at all). Gemini TTS gives consistent human-quality
+  // audio on every device and auto-detects the language from the text. If it fails
+  // the endpoint returns fallback:true so the frontend drops back to browser speech.
+
+  // Gemini returns raw 16-bit PCM; wrap it in a WAV header so browsers can play it.
+  const pcmToWav = (pcm: Buffer, sampleRate = 24000, channels = 1, bitsPerSample = 16) => {
+    const blockAlign = (channels * bitsPerSample) / 8;
+    const byteRate = sampleRate * blockAlign;
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + pcm.length, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(channels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(pcm.length, 40);
+    return Buffer.concat([header, pcm]);
+  };
+
+  app.post('/api/tts', express.json(), async (req, res) => {
+    try {
+      const { text } = req.body || {};
+      if (!text || !String(text).trim()) {
+        return res.status(400).json({ error: 'text is required' });
+      }
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'TTS not configured', fallback: true });
+      }
+
+      const response = await getAi().models.generateContent({
+        model: process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text: String(text) }] }],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            // Kore is a warm, natural female voice; the model speaks whatever
+            // language the text is in, so one voice covers zh / en / tl.
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
+          },
+        },
+      } as any);
+
+      const part = response.candidates?.[0]?.content?.parts?.[0];
+      const b64 = part?.inlineData?.data;
+      if (!b64) {
+        console.error('Gemini TTS returned no audio');
+        return res.status(502).json({ error: 'TTS provider error', fallback: true });
+      }
+
+      // mimeType looks like "audio/L16;rate=24000" — honour the rate if present.
+      const rateMatch = /rate=(\d+)/.exec(part?.inlineData?.mimeType || '');
+      const sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
+
+      const wav = pcmToWav(Buffer.from(b64, 'base64'), sampleRate);
+      res.setHeader('Content-Type', 'audio/wav');
+      res.send(wav);
+    } catch (error: any) {
+      console.error('TTS API Error:', error);
+      res.status(500).json({ error: 'Failed to synthesize speech', fallback: true });
+    }
+  });
+
   // Catch-all for undefined API routes to return JSON instead of HTML
   app.use('/api', (req, res) => {
     res.status(404).json({ error: 'API route not found' });
