@@ -8,7 +8,7 @@
 // browser. In a real deployment with real auth, Firestore succeeds and this
 // store stays empty.
 
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "./firebase";
 
 const KEY = "demo_rnReviewQueue";
@@ -135,4 +135,75 @@ export function subscribeLocalReviews(cb: (items: LocalReview[]) => void): () =>
     window.removeEventListener(EVENT, handler);
     window.removeEventListener("storage", handler);
   };
+}
+
+// ---- SIRS events (caregiver files an incident -> manager's SIRS hub) ----
+// Same demo fallback story as the RN queue above: SIRS only used Firestore, which
+// is permission-denied for demo logins, so a filed report never reached the
+// manager. Mirror it locally so the caregiver -> manager flow works in one browser.
+const SIRS_KEY = "demo_sirsEvents";
+const SIRS_EVENT = "local-sirs-events-changed";
+
+function readSirs(): LocalReview[] {
+  try {
+    return JSON.parse(localStorage.getItem(SIRS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function writeSirs(items: LocalReview[]) {
+  localStorage.setItem(SIRS_KEY, JSON.stringify(items));
+  window.dispatchEvent(new CustomEvent(SIRS_EVENT));
+}
+
+export function addLocalSirsEvent(payload: Record<string, any>): LocalReview {
+  const items = readSirs();
+  const item: LocalReview = {
+    id: `local-sirs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    __local: true,
+    status: "pending",
+    timestamp: new Date().toISOString(),
+    ...payload,
+  };
+  items.unshift(item);
+  writeSirs(items);
+  return item;
+}
+
+export function getLocalSirsEvents(): LocalReview[] {
+  return readSirs();
+}
+
+export function updateLocalSirsEvent(id: string, patch: Record<string, any>) {
+  writeSirs(readSirs().map((e) => (e.id === id ? { ...e, ...patch } : e)));
+}
+
+export function subscribeLocalSirsEvents(cb: (items: LocalReview[]) => void): () => void {
+  const handler = () => cb(readSirs());
+  window.addEventListener(SIRS_EVENT, handler);
+  window.addEventListener("storage", handler);
+  return () => {
+    window.removeEventListener(SIRS_EVENT, handler);
+    window.removeEventListener("storage", handler);
+  };
+}
+
+// Single entry point for filing a SIRS report. Demo logins (no real Firebase
+// session) go straight to the local store; real sessions write to Firestore.
+export async function submitSirsEvent(payload: Record<string, any>): Promise<void> {
+  if (!auth?.currentUser) {
+    addLocalSirsEvent(payload);
+    return;
+  }
+  try {
+    await addDoc(collection(db, "sirsEvents"), {
+      ...payload,
+      status: payload.status || "pending",
+      timestamp: serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn("Firestore SIRS write failed, using local queue", e);
+    addLocalSirsEvent(payload);
+  }
 }

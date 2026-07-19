@@ -22,7 +22,7 @@ import {
 import { db } from "../lib/firebase";
 import { subscribeResidents, seedResidentsIfEmpty, FirestoreResident, updateBasicCareTask, updateCareMinutes, updateAdlStatuses } from "../lib/residents";
 import { mockResidents } from "../data";
-import { submitReview, getLocalReviews, removeLocalReview, subscribeLocalReviews, getLocalCareLogs, subscribeLocalCareLogs } from "../lib/localReviewQueue";
+import { submitReview, getLocalReviews, removeLocalReview, subscribeLocalReviews, getLocalCareLogs, subscribeLocalCareLogs, submitSirsEvent } from "../lib/localReviewQueue";
 import {
   collection,
   onSnapshot,
@@ -372,17 +372,20 @@ export const DashboardContainer: React.FC = () => {
 
   const handleSirsReport = async (data: SIRSAlertData) => {
     try {
-      const sirsEventData = {
+      const sirsEventData: any = {
         ...data,
-        timestamp: serverTimestamp(),
+        status: "pending",
       };
-      
+
       if (selectedResidentId) {
         sirsEventData.residentId = selectedResidentId;
       }
-      
-      await addDoc(collection(db, "sirsEvents"), sirsEventData);
-      
+
+      // Routes to the local store in demo mode (Firestore is permission-denied for
+      // demo logins) so the manager's SIRS hub receives the report. serverTimestamp
+      // is added inside submitSirsEvent for the real-Firestore path.
+      await submitSirsEvent(sirsEventData);
+
       if (data.priority === 1 && selectedResidentId) {
         await updateDoc(doc(db, "residents", selectedResidentId), {
           status: "red"

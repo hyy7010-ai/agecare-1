@@ -24,6 +24,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { addToOfflineQueue } from "../lib/offlineQueue";
 import { scrubPII } from "../lib/piiScrubber";
+import { submitSirsEvent } from "../lib/localReviewQueue";
 import { CountdownTimer } from "./CountdownTimer";
 
 interface SirsReporterProps {
@@ -253,10 +254,20 @@ ${sirsResult.autofillReport.regulatorNotification}
   const handleApprove = () => {
     if (!sirsResult) return;
     setIsSubmitting(true);
+    // Actually file the report so the manager's SIRS hub receives it in real time
+    // (demo: local store; real deployment: Firestore). Previously this was a mock
+    // that only flipped the UI, so nothing ever reached the manager.
+    void submitSirsEvent({
+      ...sirsResult,
+      status: "pending",
+      residentName,
+      reporterName: currentUser?.displayName || "Caregiver",
+      reportInfo: sirsResult,
+    });
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 2000);
+    }, 1500);
   };
 
   const handleFinish = () => {

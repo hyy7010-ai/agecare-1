@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { SIRSAlertData } from '../types';
+import { getLocalSirsEvents, subscribeLocalSirsEvents, updateLocalSirsEvent } from '../lib/localReviewQueue';
 import { ShieldAlert, CheckCircle, Clock, AlertTriangle, ChevronRight, X } from 'lucide-react';
 
 interface SirsEvent extends SIRSAlertData {
@@ -19,27 +20,69 @@ export function SirsReviewDashboard({ onBack }: { onBack: () => void }) {
   const [selectedEvent, setSelectedEvent] = useState<SirsEvent | null>(null);
   
   useEffect(() => {
-    const q = query(collection(db, "sirsEvents"), orderBy("timestamp", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data: SirsEvent[] = [];
-      snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() } as SirsEvent);
-      });
-      setEvents(data);
+    // Merge Firestore events with the local demo store (caregiver reports filed in
+    // demo mode land in localStorage, since demo logins can't write to Firestore).
+    let firestoreEvents: SirsEvent[] = [];
+    const toMillis = (t: any) =>
+      typeof t === "string"
+        ? Date.parse(t)
+        : t?.toMillis
+        ? t.toMillis()
+        : t?.seconds
+        ? t.seconds * 1000
+        : 0;
+    const applyMerge = () => {
+      const local = getLocalSirsEvents() as unknown as SirsEvent[];
+      const merged = [...local, ...firestoreEvents].sort(
+        (a, b) => toMillis(b.timestamp) - toMillis(a.timestamp)
+      );
+      setEvents(merged);
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    applyMerge(); // seed from local immediately so the list isn't stuck "Loading"
+    const unsubLocal = subscribeLocalSirsEvents(() => applyMerge());
+
+    let unsubFs = () => {};
+    try {
+      const q = query(collection(db, "sirsEvents"), orderBy("timestamp", "desc"));
+      unsubFs = onSnapshot(
+        q,
+        (snapshot) => {
+          firestoreEvents = [];
+          snapshot.forEach((d) => {
+            firestoreEvents.push({ id: d.id, ...d.data() } as SirsEvent);
+          });
+          applyMerge();
+        },
+        (err) => {
+          console.warn("SIRS Firestore snapshot unavailable, using local only", err);
+          setLoading(false);
+        }
+      );
+    } catch (e) {
+      setLoading(false);
+    }
+
+    return () => {
+      unsubLocal();
+      unsubFs();
+    };
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    if (selectedEvent && selectedEvent.id === id) {
+      setSelectedEvent({ ...selectedEvent, status: newStatus as any });
+    }
+    // Local demo events live in localStorage, not Firestore.
+    if (id.startsWith("local-")) {
+      updateLocalSirsEvent(id, { status: newStatus });
+      return;
+    }
     try {
       await updateDoc(doc(db, "sirsEvents", id), {
         status: newStatus
       });
-      if (selectedEvent && selectedEvent.id === id) {
-        setSelectedEvent({ ...selectedEvent, status: newStatus as any });
-      }
     } catch (e) {
       console.error("Failed to update status", e);
     }
