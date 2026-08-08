@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import {
   ArrowLeft,
@@ -14,7 +14,7 @@ import { PendingReview } from "../types";
 interface RNReviewListProps {
   onBack: () => void;
   pendingReviews: PendingReview[];
-  onConfirmReview: (id: string) => void;
+  onConfirmReview: (id: string, editedObservation?: string) => void;
 }
 
 export function RNReviewList({
@@ -24,25 +24,40 @@ export function RNReviewList({
 }: RNReviewListProps) {
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
   const [rnLiabilityChecked, setRnLiabilityChecked] = useState(false);
+  // The RN may correct the AI draft before signing. We keep the edited text in
+  // local state and only persist it on sign-off, so the original AI output is
+  // still what gets compared against in the audit log.
+  const [editedObservation, setEditedObservation] = useState("");
   const selectedReview = pendingReviews.find((r) => r.id === selectedReviewId);
   const { t, lang } = useLanguage();
 
-  const handleAddNote = () => {
-    const note = window.prompt("Enter RN notes or override details:", "");
-    if (note && selectedReview) {
-      // In a real app, this would append to the review object and save to DB.
-      // For now, we'll just confirm it.
-      onConfirmReview(selectedReview.id);
-      setSelectedReviewId(null);
-    }
+  const originalObservation = selectedReview?.aiResult.observation ?? "";
+  const wasEdited = editedObservation.trim() !== originalObservation.trim();
+
+  // Load the AI draft into the editor whenever a different review is opened.
+  useEffect(() => {
+    setEditedObservation(originalObservation);
+  }, [selectedReviewId, originalObservation]);
+
+  const closeDetail = () => {
+    setSelectedReviewId(null);
+    setRnLiabilityChecked(false);
   };
+
+  const handleSignOff = () => {
+    if (!rnLiabilityChecked || !selectedReview) return;
+    onConfirmReview(selectedReview.id, editedObservation);
+    closeDetail();
+  };
+
+  const handleRevertToAi = () => setEditedObservation(originalObservation);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={selectedReviewId ? () => { setSelectedReviewId(null); setRnLiabilityChecked(false); } : onBack}
+          onClick={selectedReviewId ? closeDetail : onBack}
           className="p-2 hover:bg-slate-200 rounded-full transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
@@ -192,12 +207,35 @@ export function RNReviewList({
 
             <div className="p-6 space-y-5">
               <div>
-                <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                  Visual Observation
-                </span>
-                <p className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-sm text-slate-700 leading-relaxed font-light">
-                  {selectedReview.aiResult.observation}
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="block text-xs font-normal text-slate-400 uppercase">
+                    Visual Observation
+                    <span className="ml-2 normal-case text-slate-400">
+                      {lang === "zh" ? "· 可直接修改" : "· editable"}
+                    </span>
+                  </span>
+                  {wasEdited && (
+                    <button
+                      onClick={handleRevertToAi}
+                      className="text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2"
+                    >
+                      {lang === "zh" ? "还原 AI 原文" : "Revert to AI draft"}
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={editedObservation}
+                  onChange={(e) => setEditedObservation(e.target.value)}
+                  rows={5}
+                  className="w-full bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-700 leading-relaxed font-light resize-y focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+                {wasEdited && (
+                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    {lang === "zh"
+                      ? "已修改 AI 原文。签字后，原文与修改内容都会写入审计日志。"
+                      : "AI draft modified. Both the original and your edit are written to the audit log on sign-off."}
+                  </p>
+                )}
               </div>
 
               {selectedReview.aiResult.observationType === "excrement" ? (
@@ -307,16 +345,12 @@ export function RNReviewList({
                   {t("ai_observation_disclaimer")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={handleAddNote} className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <button onClick={closeDetail} className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
                     <Edit3 className="w-4 h-4" />
-                    {t('add_note_override')}
+                    {lang === "zh" ? "退回队列，稍后处理" : "Back to queue"}
                   </button>
                   <button
-                    onClick={() => {
-                      if (!rnLiabilityChecked) return;
-                      onConfirmReview(selectedReview.id);
-                      setSelectedReviewId(null);
-                    }}
+                    onClick={handleSignOff}
                     disabled={!rnLiabilityChecked}
                     className={`py-3 font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm ${
                       rnLiabilityChecked

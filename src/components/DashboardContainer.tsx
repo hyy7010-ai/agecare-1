@@ -416,34 +416,49 @@ export const DashboardContainer: React.FC = () => {
     await submitReview(reviewPayload);
   };
 
-  const removePendingReview = async (id: string) => {
+  const removePendingReview = async (id: string, editedObservation?: string) => {
     const review = pendingReviews.find((r) => r.id === id);
     if (review) {
+      // The RN may have corrected the AI draft before signing. The corrected
+      // text becomes the clinical record; the AI original is preserved in the
+      // append-only audit log so any change stays traceable.
+      const aiOriginal = review.aiResult.observation;
+      const finalObservation =
+        editedObservation !== undefined && editedObservation.trim() !== ""
+          ? editedObservation
+          : aiOriginal;
+      const wasEdited = finalObservation.trim() !== aiOriginal.trim();
+      const editSuffix = wasEdited
+        ? ` | RN EDITED the AI draft before signing. AI original: "${aiOriginal}" | RN final: "${finalObservation}"`
+        : " | Signed without changes to the AI draft.";
+
       try {
         if (review.aiResult.observationType === "care_note") {
           await logAuditAction({
-            action: "RN_APPROVED_CARE_NOTE",
+            action: wasEdited ? "RN_EDITED_AND_APPROVED_CARE_NOTE" : "RN_APPROVED_CARE_NOTE",
             userId: userProfile?.uid || "unknown",
             userEmail: userProfile?.email || "unknown",
             userRole: userProfile?.role || "rn",
-            details: `RN approved AI-generated care note for resident ${review.residentId}`,
+            details: `RN approved AI-generated care note for resident ${review.residentId}${editSuffix}`,
             resourceId: review.residentId
           });
           // Route care note reviews to dailyCareNotes
           await addDoc(collection(db, "dailyCareNotes"), {
             residentId: review.residentId,
-            content: review.aiResult.observation,
+            content: finalObservation,
+            aiOriginal,
+            editedByRn: wasEdited,
             shift: "Current",
             createdBy: "Sarah Jenkins (Caregiver, AI-Assisted)",
             timestamp: serverTimestamp(),
           });
         } else {
           await logAuditAction({
-            action: "RN_APPROVED_OBSERVATION",
+            action: wasEdited ? "RN_EDITED_AND_APPROVED_OBSERVATION" : "RN_APPROVED_OBSERVATION",
             userId: userProfile?.uid || "unknown",
             userEmail: userProfile?.email || "unknown",
             userRole: userProfile?.role || "rn",
-            details: `RN approved AI-generated physical observation for resident ${review.residentId}`,
+            details: `RN approved AI-generated physical observation for resident ${review.residentId}${editSuffix}`,
             resourceId: review.residentId
           });
           // Route physical skin or excrement observations to observations
@@ -451,7 +466,9 @@ export const DashboardContainer: React.FC = () => {
             residentId: review.residentId,
             type: review.aiResult.observationType || "general",
             photoUrl: review.photoUrl || "",
-            aiAnalysis: review.aiResult.observation,
+            aiAnalysis: finalObservation,
+            aiOriginal,
+            editedByRn: wasEdited,
             location: review.aiResult.bodyLocation || "",
             sizeEstimate: review.aiResult.estimatedSizeOrType || "",
             riskFlag: review.aiResult.potentialRiskFlag || "",
