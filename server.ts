@@ -60,13 +60,24 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
 
   // Initialize Gemini lazy
+  const useVertex = () => !!(process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   let ai: GoogleGenAI | null = null;
   const getAi = () => {
     if (!ai) {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error('GEMINI_API_KEY is missing');
+      if (useVertex()) {
+        // Vertex AI (Google Cloud billing) with a service account
+        ai = new GoogleGenAI({
+          vertexai: true,
+          project: process.env.GOOGLE_CLOUD_PROJECT,
+          location: process.env.GOOGLE_CLOUD_LOCATION || 'global',
+          googleAuthOptions: { credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!) },
+        });
+      } else {
+        if (!process.env.GEMINI_API_KEY) {
+          throw new Error('GEMINI_API_KEY is missing');
+        }
+        ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       }
-      ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     }
     return ai;
   };
@@ -885,7 +896,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       if (!text || !String(text).trim()) {
         return res.status(400).json({ error: 'text is required' });
       }
-      if (!process.env.GEMINI_API_KEY) {
+      if (!process.env.GEMINI_API_KEY && !useVertex()) {
         return res.status(503).json({ error: 'TTS not configured', fallback: true });
       }
 
