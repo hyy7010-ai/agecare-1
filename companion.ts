@@ -181,6 +181,7 @@ export async function chatCard(generate: GenerateFn, input: { history: Turn[]; c
 Write a short card that helps a care worker talk with this resident.
 Rules:
 - Use only what the resident said. No guesses, no diagnoses, no advice about treatment.
+- Do not add any fact that is not in the quote. For example, do not say a person has died, is ill or lives far away unless the resident said so.
 - Every item needs "quote": the resident's exact words (copied, same language) that support it.
 - "text" is written in ${carerLang}, one short line.
 - "tellNurse" is only for health, safety or mood worries the resident raised themselves.
