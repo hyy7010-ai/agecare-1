@@ -43,7 +43,7 @@ const RED_FLAGS: { reason: string; re: RegExp }[] = [
   },
   {
     reason: "Says they fell",
-    re: /(i (just )?fell(?! in love| asleep| for)|i had a fall|i slipped|我(刚|剛|啱啱|今日|今天|昨晚|尋晚)?.{0,4}(跌倒|摔倒|摔了|跌咗|跌親|仆倒|滑倒))/i,
+    re: /(i (just )?fell(?! in love| asleep| for)|i had a fall|i slipped|我(刚|剛|啱啱|今日|今天|昨晚|尋晚)?.{0,4}(跌倒|摔倒|摔了|跌咗|跌親|仆倒|滑倒)(?!副|個|个|支|部|隻|只|本|把|條|条|張|张|啲|嘢|东西|東西|手机|手機|眼))/i,
   },
   {
     reason: "Says someone hurt them",

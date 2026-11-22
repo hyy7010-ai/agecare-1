@@ -22,6 +22,7 @@ type AgentResult = {
   review?: { ticket: string; status: string; note: string };
   trace: Step[]; totalMs: number; model: string;
 };
+import { addShift, updateShift } from "../lib/shiftLog";
 type AuditEntry = { at: string; action: string; detail: string };
 
 const LANGS = [
@@ -137,6 +138,13 @@ export function AgentConsole() {
       }
       if (!final) throw new Error("Agent stopped before finishing.");
       setResult(final);
+      if (final.note && final.review?.ticket)
+        addShift({
+          id: final.review.ticket, kind: "note", text: final.note.englishNote,
+          urgent: !!final.sirs?.lockDowngrade, pending: true,
+          status: final.sirs?.lockDowngrade ? `必须上报 Must report (${final.sirs.timeframe || ""})，等护士确认 awaiting RN`
+            : final.sirs?.rnMustCheck ? "红线：护士必须核对，还没决定 RN must check, not decided yet" : "等护士确认 Awaiting RN",
+        });
       log("AGENT_RUN", `${final.review?.ticket} · ${final.trace.length} steps · SIRS P${final.sirs?.priority ?? "-"}`);
     } catch (e: any) {
       setError(e.message);
@@ -165,6 +173,13 @@ export function AgentConsole() {
     if (result?.sirs?.rnMustCheck && rnCheck)
       log("RN_REPORTING_DECISION", `${result?.review?.ticket} · ${rnCheck === "report" ? "will report" : "not reportable"} · by ${rnName}`);
     const edited = result?.note && editedNote.trim() !== result.note.englishNote.trim();
+    if (result?.review?.ticket)
+      updateShift(result.review.ticket, {
+        text: editedNote.trim() || result.note?.englishNote || "", pending: d !== "approved",
+        status: d === "approved"
+          ? `护士已确认 RN approved by ${rnName.trim()}${result.sirs?.lockDowngrade ? " · 必须上报 must report" : rnCheck === "report" ? " · 决定上报 will report" : rnCheck === "no_report" ? " · 决定不用上报 not reportable" : ""}`
+          : `护士退回 Returned by ${rnName.trim()}`,
+      });
     log(d === "approved" ? "RN_APPROVED" : "RN_RETURNED",
       `${result?.review?.ticket} · by ${rnName}${edited ? " · note edited by RN" : ""}`);
   };
@@ -191,7 +206,7 @@ export function AgentConsole() {
             <h1 className="text-xl font-bold">Sunrise Care Agent</h1>
             <p className="text-sm text-slate-500">护工说母语 → AI 智能体整理成英文护理记录、判断严重事件 → 护士确认后才生效</p>
           </div>
-          <a href="/companion" className="ml-auto text-sm text-orange-600 hover:underline">陪伴聊天 Companion →</a>
+          <div className="ml-auto flex gap-4 text-sm"><a href="/demo" className="text-orange-600 hover:underline">示范首页 Home</a><a href="/companion" className="text-orange-600 hover:underline">陪伴聊天 Companion</a><a href="/handover" className="text-orange-600 hover:underline">交班单 Handover →</a></div>
         </div>
       </header>
 

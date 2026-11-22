@@ -9,6 +9,8 @@ import { ForgotPassword } from "./components/ForgotPassword";
 import { DashboardContainer } from "./components/DashboardContainer";
 import { AgentConsole } from "./components/AgentConsole";
 import { CompanionChat } from "./components/CompanionChat";
+import { Handover } from "./components/Handover";
+import { DemoHome } from "./components/DemoHome";
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/agent" element={<AgentConsole />} />
             <Route path="/companion" element={<CompanionChat />} />
+            <Route path="/handover" element={<Handover />} />
+            <Route path="/demo" element={<DemoHome />} />
             <Route
               path="/"
               element={

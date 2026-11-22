@@ -101,6 +101,7 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      <a href="/demo" className="fixed top-3 right-3 z-50 text-sm px-3 py-1.5 rounded-full bg-orange-500 text-white shadow hover:bg-orange-600">比赛示范 Demo（不用登录 no login）→</a>
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-indigo-900 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-indigo-800 to-teal-900 opacity-90 z-0"></div>

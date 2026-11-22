@@ -4,8 +4,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Heart, Mic, Square, Send, ShieldAlert, ShieldCheck, Loader2, Volume2, VolumeX, ClipboardList, Quote, Bot } from "lucide-react";
 
+import { addShift, updateShift } from "../lib/shiftLog";
 type Turn = { role: "resident" | "ai"; text: string; fixed?: boolean };
-type Alert = { at: string; level: "urgent" | "note"; reasons: string[]; raisedBy: "rule" | "model"; quote: string; ackBy?: string };
+type Alert = { id: string; at: string; level: "urgent" | "note"; reasons: string[]; raisedBy: "rule" | "model"; quote: string; ackBy?: string };
 type Item = { text: string; quote: string };
 type Card = {
   card: { mood: Item | null; likesToTalkAbout: Item[]; avoid: Item[]; habits: Item[]; tellNurse: Item[] };
@@ -63,6 +64,8 @@ const SECTIONS: { key: keyof Card["card"]; label: string }[] = [
 
 export function CompanionChat() {
   const [consent, setConsent] = useState(false);
+  const [resident, setResident] = useState("陳婆婆");
+  const [session] = useState(() => Math.random().toString(36).slice(2, 6).toUpperCase());
   const [started, setStarted] = useState(false);
   const [language, setLanguage] = useState("yue");
   const [carerLanguage, setCarerLanguage] = useState("en");
@@ -122,7 +125,13 @@ export function CompanionChat() {
         ...(audio ? [...t, { role: "resident" as const, text: res.transcript }] : t),
         { role: "ai", text: res.reply, fixed: res.replySource === "fixed_safe_reply" },
       ]);
-      if (res.alert) setAlerts((a) => [{ at: new Date().toLocaleTimeString(), ...res.alert, quote: res.transcript }, ...a]);
+      if (res.alert) {
+        const id = `A-${session}-${Date.now().toString(36).slice(-3).toUpperCase()}`;
+        setAlerts((a) => [{ id, at: new Date().toLocaleTimeString(), ...res.alert, quote: res.transcript }, ...a]);
+        addShift({ id, kind: "alert", resident: resident.trim() || undefined, urgent: res.alert.level === "urgent", pending: res.alert.level === "urgent",
+          text: `${res.alert.reasons.join("; ")}. 原话 Resident said: ${res.transcript}`,
+          status: res.alert.level === "urgent" ? "紧急，护士还没处理 Urgent, not acknowledged" : "留意 Note" });
+      }
       say(res.reply);
     } catch (e: any) {
       setError(e.message || "Failed");
@@ -161,6 +170,10 @@ export function CompanionChat() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Failed");
       setCard(j.result);
+      const c = j.result.card;
+      const part = (label: string, items: Item[]) => (items?.length ? `${label}: ${items.map((x) => `${x.text} (${x.quote})`).join("; ")}.` : "");
+      const text = [c.mood ? `Mood: ${c.mood.text} (${c.mood.quote}).` : "", part("Likes to talk about", c.likesToTalkAbout), part("Avoid", c.avoid), part("Habits", c.habits), part("Tell the nurse", c.tellNurse)].filter(Boolean).join(" ");
+      if (text) addShift({ id: `C-${session}`, kind: "card", resident: resident.trim() || undefined, text });
     } catch (e: any) {
       setError(e.message || "Failed");
     } finally {
@@ -170,7 +183,9 @@ export function CompanionChat() {
 
   const ack = (i: number) => {
     if (!nurse.trim()) return;
-    setAlerts((a) => a.map((x, k) => (k === i ? { ...x, ackBy: `${nurse.trim()} ${new Date().toLocaleTimeString()}` } : x)));
+    const by = `${nurse.trim()} ${new Date().toLocaleTimeString()}`;
+    setAlerts((a) => a.map((x, k) => (k === i ? { ...x, ackBy: by } : x)));
+    if (alerts[i]) updateShift(alerts[i].id, { pending: false, status: `护士已处理 Acknowledged by ${by}` });
   };
 
   const residentSaid = turns.some((t) => t.role === "resident");
@@ -185,7 +200,7 @@ export function CompanionChat() {
             <h1 className="text-xl font-bold">Sunrise Care Companion</h1>
             <p className="text-sm text-slate-500">AI 陪院友聊天 → 整理成护工看得懂的“聊天卡” → 有危险的话马上通知护士</p>
           </div>
-          <a href="/agent" className="text-sm text-orange-600 hover:underline flex items-center gap-1"><Bot className="w-4 h-4" /> 护理记录智能体</a>
+          <div className="flex gap-4 text-sm"><a href="/demo" className="text-orange-600 hover:underline">示范首页 Home</a><a href="/agent" className="text-orange-600 hover:underline flex items-center gap-1"><Bot className="w-4 h-4" /> 护理记录 Notes</a><a href="/handover" className="text-orange-600 hover:underline">交班单 Handover →</a></div>
         </div>
       </header>
 
@@ -215,6 +230,10 @@ export function CompanionChat() {
                 <li>聊天内容会整理成给护工看的卡片。The chat is summarised for care staff.</li>
                 <li>示范只用虚构内容，请不要输入真实院友资料。Demo only: fictional content, no real resident data.</li>
               </ul>
+              <label className="block text-sm">
+                <span className="text-slate-600">院友称呼（示范请用虚构名字）Resident's name (use a fictional name)</span>
+                <input value={resident} onChange={(e) => setResident(e.target.value)} className="mt-1 border rounded px-3 py-2 w-56 block" />
+              </label>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                 <span>院友（或家属）已经同意和 AI 聊天，并同意把内容整理给护理人员。<br />The resident (or family) has agreed to the chat and to the summary for care staff.</span>

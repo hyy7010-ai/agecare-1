@@ -20,6 +20,8 @@ describe("resident red flags", () => {
     expect(residentRedFlags("我想食蛋撻")).toEqual([]);
     expect(residentRedFlags("I fell in love with dancing when I was young")).toEqual([]);
     expect(residentRedFlags("我好想死去的老伴")).toEqual([]);
+    expect(residentRedFlags("我跌咗副眼鏡，搵唔返。")).toEqual([]);
+    expect(residentRedFlags("我啱啱喺廁所跌咗。")).toContain("Says they fell");
     expect(residentRedFlags("I fell in the bathroom")).toContain("Says they fell");
   });
 });
