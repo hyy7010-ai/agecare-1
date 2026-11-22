@@ -60,11 +60,14 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
 
   // Initialize Gemini lazy
-  const useVertex = () => !!(process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const useVertex = () => !!(process.env.GOOGLE_VERTEX_API_KEY || (process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_SERVICE_ACCOUNT_JSON));
   let ai: GoogleGenAI | null = null;
   const getAi = () => {
     if (!ai) {
-      if (useVertex()) {
+      if (process.env.GOOGLE_VERTEX_API_KEY) {
+        // Vertex AI (Google Cloud billing) with a Google Cloud API key
+        ai = new GoogleGenAI({ vertexai: true, apiKey: process.env.GOOGLE_VERTEX_API_KEY });
+      } else if (useVertex()) {
         // Vertex AI (Google Cloud billing) with a service account
         ai = new GoogleGenAI({
           vertexai: true,
