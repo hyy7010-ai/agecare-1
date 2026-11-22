@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import multer from 'multer';
 import { registerAgentRoutes } from './agent';
+import { registerCompanionRoutes } from './companion';
 
 // Set up Multer for handling file uploads (in memory)
 const upload = multer({ storage: multer.memoryStorage() });
@@ -938,6 +939,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Sunrise Care Agent (added for the Cyberport AI Agent Challenge, Nov 2026)
   registerAgentRoutes(app, generateWithRetry);
+  registerCompanionRoutes(app, generateWithRetry);
 
   // Catch-all for undefined API routes to return JSON instead of HTML
   app.use('/api', (req, res) => {

@@ -8,6 +8,7 @@ import { Register } from "./components/Register";
 import { ForgotPassword } from "./components/ForgotPassword";
 import { DashboardContainer } from "./components/DashboardContainer";
 import { AgentConsole } from "./components/AgentConsole";
+import { CompanionChat } from "./components/CompanionChat";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/agent" element={<AgentConsole />} />
+            <Route path="/companion" element={<CompanionChat />} />
             <Route
               path="/"
               element={

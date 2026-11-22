@@ -191,6 +191,7 @@ export function AgentConsole() {
             <h1 className="text-xl font-bold">Sunrise Care Agent</h1>
             <p className="text-sm text-slate-500">护工说母语 → AI 智能体整理成英文护理记录、判断严重事件 → 护士确认后才生效</p>
           </div>
+          <a href="/companion" className="ml-auto text-sm text-orange-600 hover:underline">陪伴聊天 Companion →</a>
         </div>
       </header>
 
