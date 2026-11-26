@@ -1,59 +1,61 @@
 // Public demo home — added for the Cyberport AI Agent Challenge (Nov 2026).
 // One place to start: three steps a visitor can try without an account.
 import React from "react";
-import { Sun, Bot, Heart, ClipboardCheck, ShieldCheck, ArrowRight } from "lucide-react";
+import { ScPage, useEn } from "./ScShell";
 
 const STEPS = [
-  { n: 1, href: "/agent", icon: Bot, title: "护理记录 Care notes", zh: "护工用母语说一句，智能体写英文记录、逐句核对、判断严重事故，最后交护士确认。",
-    en: "A carer speaks in their own language. The agent drafts the note, checks it, assesses incidents, and stops for a nurse.", try: "试试：点示例“普通话：跌倒撞头”，再点“运行智能体”。" },
-  { n: 2, href: "/companion", icon: Heart, title: "陪伴聊天 Companion", zh: "AI 陪院友聊天，整理成护工看得懂的聊天卡；说到胸口痛等危险的话，马上通知护士。",
-    en: "The AI keeps a resident company, builds a chat card for carers, and alerts the nurse on red flags.", try: "试试：勾选同意 → 开始 → 点下面的示例句子 → 点“生成”。" },
-  { n: 3, href: "/handover", icon: ClipboardCheck, title: "交班单 Handover", zh: "班尾一键把这个班的记录、提醒、聊天卡整理成一页交班单，每一行都能点回来源。",
-    en: "One tap turns the shift's notes, alerts and chat cards into a handover sheet with sources.", try: "试试：点“载入示范班次”，再点“生成交班单”。" },
+  { href: "/agent", zh: "护理记录", en: "Care notes",
+    dZh: "说一句母语，出一份英文记录，每句都对得上原话，最后交护士确认。",
+    dEn: "Say it in your own language. The agent drafts an English note, checks every sentence, and stops for a nurse.",
+    tZh: "试试：点示例「跌倒撞头」，再点「生成记录」。", tEn: "Try: pick the “fall” example, then Generate note." },
+  { href: "/companion", zh: "陪伴聊天", en: "Companion",
+    dZh: "陪老人聊天，整理成护工看得懂的聊天卡；听到危险的话马上叫护士。",
+    dEn: "Keeps a resident company, builds a chat card for carers, and alerts the nurse on red flags.",
+    tZh: "试试：勾选同意，开始，点示例句子，再点「生成」。", tEn: "Try: give consent, start, tap a sample sentence, then Generate." },
+  { href: "/handover", zh: "交班单", en: "Handover",
+    dZh: "一个班的事整理成一页，每行都能点回原始记录。",
+    dEn: "One shift on one page. Every line links back to where it came from.",
+    tZh: "试试：点「载入示范班次」，再点「生成交班单」。", tEn: "Try: Load demo shift, then Generate." },
 ];
 
 export function DemoHome() {
+  const { en, t } = useEn();
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 py-6 flex items-center gap-3">
-          <Sun className="w-10 h-10 text-orange-500" />
-          <div>
-            <h1 className="text-2xl font-bold">Sunrise Care 晨曦關懷</h1>
-            <p className="text-slate-500">把时间还给照顾和陪伴的养老院智能体 · An AI agent that gives care time back to carers and residents</p>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="rounded-xl border bg-white p-4 flex items-start gap-3">
-          <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-slate-700">
-            <div className="font-semibold">不用登录，三步就能试完。No account needed.</div>
-            <div>示范只使用虚构数据，请不要输入真实院友资料。AI 只做辅助，重要的事一定交给护士。</div>
-            <div className="text-slate-500">Demo uses fictional data only. Please do not enter real resident information. The AI assists; a nurse decides.</div>
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <a key={s.n} href={s.href} className="group rounded-xl border bg-white p-5 hover:border-orange-400 hover:shadow transition flex flex-col">
-              <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center">{s.n}</span>
-                <s.icon className="w-6 h-6 text-orange-500" />
-                <span className="font-semibold text-lg">{s.title}</span>
-              </div>
-              <p className="mt-3 text-sm text-slate-700">{s.zh}</p>
-              <p className="mt-1 text-xs text-slate-500">{s.en}</p>
-              <p className="mt-3 text-sm bg-orange-50 text-orange-800 rounded-lg p-2">{s.try}</p>
-              <span className="mt-4 text-orange-600 font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">打开 Open <ArrowRight className="w-4 h-4" /></span>
+    <ScPage>
+      <main className="max-w-[1120px] mx-auto px-4 sm:px-8 pt-12 sm:pt-[72px] pb-20 flex flex-col">
+        <h1 className="m-0 font-semibold tracking-[-0.03em] leading-[1.08] max-w-[820px]" style={{ fontSize: "clamp(40px, 6vw, 72px)" }}>
+          {en ? <>Carers speak their language.<br />A nurse signs it off.</> : <>护工说母语，<br />护士确认才生效。</>}
+        </h1>
+        <p className="mt-6 text-lg leading-[30px] text-sc-ink-2 max-w-[560px]">
+          {t("护工用自己的语言说发生了什么，智能体写成英文护理记录，逐句对照原话，交给护士决定。",
+            "A carer says what happened in their own language. The agent writes the English care note, checks it sentence by sentence, and hands it to a nurse.")}
+        </p>
+
+        <div className="mt-14 sm:mt-[72px] flex flex-col">
+          {STEPS.map((s, i) => (
+            <a key={s.href} href={s.href}
+              className={`group flex flex-wrap items-baseline gap-x-6 gap-y-2 py-7 border-t border-sc-line text-sc-ink ${i === STEPS.length - 1 ? "border-b" : ""}`}>
+              <span className="basis-[200px] shrink-0 text-[22px] font-semibold">{en ? s.en : s.zh}</span>
+              <span className="flex-1 basis-[320px] flex flex-col gap-1">
+                <span className="text-base leading-[26px] text-sc-ink-2">{en ? s.dEn : s.dZh}</span>
+                <span className="text-sm text-sc-muted">{en ? s.tEn : s.tZh}</span>
+              </span>
+              <span className="text-xl transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
             </a>
           ))}
         </div>
-        <div className="text-sm text-slate-500 space-y-1">
-          <div>第一次打开时如果等了几十秒，是免费服务器在启动，之后就快了。If the first run takes a while, the free server is waking up.</div>
-          <div>代码和测试结果 Code and evaluation: <a className="text-orange-600 hover:underline" href="https://github.com/hyy7010-ai/agecare-1" target="_blank" rel="noreferrer">github.com/hyy7010-ai/agecare-1</a></div>
-          <div>原有的院舍管理 App（需要登录）The original facility app (login required): <a className="text-orange-600 hover:underline" href="/login">/login</a></div>
+
+        <div className="mt-14 flex flex-wrap gap-x-12 gap-y-4 text-sm leading-[22px] text-sc-muted">
+          <span className="flex-1 basis-[260px] max-w-[340px]">{t("智能体不能自己定稿，也不能自己上报，每次都停下来等护士。", "The agent can't finalise or report on its own. It always stops for a nurse.")}</span>
+          <span className="flex-1 basis-[260px] max-w-[340px]">{t("只用虚构数据，请不要输入真实院友资料。电话和证件号在送给 AI 之前会被遮掉。", "Fictional data only; please don't enter real resident details. Phone and ID numbers are masked before the AI sees them.")}</span>
+          <span className="flex-1 basis-[260px] max-w-[340px]">{t("不用登录。第一次打开要等几十秒，免费服务器在启动。", "No account needed. The first run can take a while because the free server is waking up.")}</span>
         </div>
       </main>
-    </div>
+
+      <footer className="max-w-[1120px] mx-auto px-4 sm:px-8 pt-6 pb-10 flex flex-wrap gap-7 text-sm">
+        <a href="https://github.com/hyy7010-ai/agecare-1" target="_blank" rel="noreferrer" className="text-sc-ink-2 underline hover:text-sc-ink">{t("代码和测试结果", "Code and evaluation")}</a>
+        <a href="/login" className="text-sc-ink-2 underline hover:text-sc-ink">{t("原来的院舍 App（要登录）", "Original facility app (login required)")}</a>
+      </footer>
+    </ScPage>
   );
 }

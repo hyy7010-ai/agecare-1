@@ -1,9 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  /* Sunrise Care public pages (/demo /agent /handover): black, white, grey + one red for urgent */
+  --color-sc-ink: #111111;
+  --color-sc-ink-2: #555555;
+  --color-sc-muted: #6B6B6B;
+  --color-sc-line: #EDEDED;
+  --color-sc-photo: #F5F5F3;
+  --color-sc-red: #D4382C;
+  --color-sc-red-text: #C2322A;
+  --color-sc-red-tint: #FDF1EF;
   
   --animate-blob: blob 7s infinite;
 
@@ -38,3 +48,12 @@ h1, h2, h3, h4, h5, h6 {
   animation-delay: 2s;
 }
 
+
+/* Scoped to the public demo pages so the logged-in facility app keeps its look. */
+.sc {
+  font-family: Inter, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  background: #FFFFFF;
+  color: #111111;
+}
+.sc h1, .sc h2, .sc h3 { font-family: inherit; }
+.sc ::selection { background: #EDEDED; color: #111111; }
