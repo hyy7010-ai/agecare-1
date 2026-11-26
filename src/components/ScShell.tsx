@@ -21,9 +21,7 @@ export function ScPage({ current, children }: { current?: string; children: Reac
     <div className="sc min-h-screen" lang={en ? "en" : "zh-CN"}>
       <header className="max-w-[1120px] mx-auto px-4 sm:px-8 py-6 flex flex-wrap items-center gap-x-6 gap-y-3">
         <a href="/demo" className="flex items-center gap-2 text-sc-ink no-underline">
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="#D4382C" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-            <path d="M8 22a8 8 0 0 1 16 0" /><path d="M4 26h24" />
-          </svg>
+          <img src="/sunrise-care-mark.svg" width={22} height={22} alt="" aria-hidden="true" />
           <span className="text-base font-semibold">Sunrise Care</span>
         </a>
         <nav aria-label={t("主导航", "Main")} className="ml-auto flex flex-wrap items-center gap-x-7 gap-y-2 text-[15px]">

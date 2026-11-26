@@ -23,6 +23,7 @@ export function DemoHome() {
   return (
     <ScPage>
       <main className="max-w-[1120px] mx-auto px-4 sm:px-8 pt-12 sm:pt-[72px] pb-20 flex flex-col">
+        <img src="/sunrise-care-logo.svg" alt="Sunrise Care" className="w-[200px] sm:w-[240px] h-auto mb-10 -ml-2" />
         <h1 className="m-0 font-semibold tracking-[-0.03em] leading-[1.08] max-w-[820px]" style={{ fontSize: "clamp(40px, 6vw, 72px)" }}>
           {en ? <>Carers speak their language.<br />A nurse signs it off.</> : <>护工说母语，<br />护士确认才生效。</>}
         </h1>
