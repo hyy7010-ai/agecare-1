@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import { ScPage, Label, useEn, btnPrimary, btnSecondary, tab } from "./ScShell";
+import { useIdentity, setIdentity } from "../lib/demoStore";
 
 type Step = {
   step: number; tool: string; reason: string; args: any; output: any; ms: number;
@@ -54,6 +55,8 @@ const readAudit = (): AuditEntry[] => {
 
 export function AgentConsole() {
   const { en, t } = useEn();
+  const me = useIdentity();
+  const canSign = me.role === "nurse" || me.role === "manager";
   const [language, setLanguage] = useState("zh");
   const [jurisdiction, setJurisdiction] = useState<"AU" | "HK">("HK");
   const [text, setText] = useState("");
@@ -81,6 +84,7 @@ export function AgentConsole() {
   };
 
   useEffect(() => { if (result?.note) setEditedNote(result.note.englishNote); }, [result]);
+  useEffect(() => { if (canSign && !rnName) setRnName(me.name); }, [me.id]);
 
   const startRec = async () => {
     setError("");
@@ -304,7 +308,18 @@ export function AgentConsole() {
             </div>
           )}
 
-          {result && (
+          {result && !canSign && (
+            <div className={`mt-10 flex flex-col gap-3 ${needsNurse ? "rounded-[20px] bg-sc-red-tint p-6" : "border-t border-sc-line pt-6"}`}>
+              <span className="text-[17px] font-semibold">{t("已交给护士", "Sent to the nurse")}</span>
+              <span className="text-[15px] leading-6 text-sc-ink-2">
+                {s?.rnMustCheck ? t("这件事可能要上报，护士要先决定。", "This may need reporting; the nurse decides first.") : t("护士确认以后，这份记录才算数。", "The note counts only after a nurse confirms it.")}
+                {t("护士在「护士台」批准。", " The nurse approves it at the nurse station.")}
+              </span>
+              <button onClick={() => setIdentity("nurse-priya")} className={`${btnSecondary} self-start min-h-11 ${needsNurse ? "bg-transparent" : ""}`}>{t("切换成护士 Priya 看看", "Switch to Nurse Priya")}</button>
+            </div>
+          )}
+
+          {result && canSign && (
             <div className={`mt-10 flex flex-col gap-3.5 ${needsNurse ? "rounded-[20px] bg-sc-red-tint p-6" : "border-t border-sc-line pt-6"}`}>
               <span className="text-[17px] font-semibold">{s?.rnMustCheck ? t("护士：要不要上报？", "Nurse: report this?") : t("护士确认", "Nurse sign-off")}</span>
               {s && (

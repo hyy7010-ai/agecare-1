@@ -11,6 +11,8 @@ import { AgentConsole } from "./components/AgentConsole";
 import { CompanionChat } from "./components/CompanionChat";
 import { Handover } from "./components/Handover";
 import { DemoHome } from "./components/DemoHome";
+import { Station } from "./components/Station";
+import { Residents } from "./components/Residents";
 
 export default function App() {
   return (
@@ -25,6 +27,8 @@ export default function App() {
             <Route path="/companion" element={<CompanionChat />} />
             <Route path="/handover" element={<Handover />} />
             <Route path="/demo" element={<DemoHome />} />
+            <Route path="/station" element={<Station />} />
+            <Route path="/residents" element={<Residents />} />
             <Route
               path="/"
               element={

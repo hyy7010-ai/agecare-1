@@ -16,6 +16,14 @@ const STEPS = [
     dZh: "一个班的事整理成一页，每行都能点回原始记录。",
     dEn: "One shift on one page. Every line links back to where it came from.",
     tZh: "试试：点「载入示范班次」，再点「生成交班单」。", tEn: "Try: Load demo shift, then Generate." },
+  { href: "/station", zh: "护士台和叫人", en: "Nurse station & calls",
+    dZh: "护工叫护士、经理或同事帮忙，对方马上收到，按「马上到」回复；护士在这里批准记录。",
+    dEn: "A carer calls a nurse, the manager or a colleague; they get it at once and reply “on my way”. The nurse approves notes here.",
+    tZh: "试试：开两个分页，右上角一个选「护工 Jane」、一个选「护士 Priya」，点「叫人」。", tEn: "Try: open two tabs, pick Carer Jane in one and Nurse Priya in the other, then press Call." },
+  { href: "/residents", zh: "老人面板", en: "Resident panel",
+    dZh: "每位老人一页。不同身份看到的不一样：家属只看得到自己的家人和护士确认过的记录。",
+    dEn: "One page per resident. What you see depends on who you are: family see only their relative and nurse-confirmed notes.",
+    tZh: "试试：右上角换成「家属」，再换成「护士」，比较一下。", tEn: "Try: switch to Family, then to Nurse, and compare." },
 ];
 
 export function DemoHome() {
@@ -49,7 +57,7 @@ export function DemoHome() {
         <div className="mt-14 flex flex-wrap gap-x-12 gap-y-4 text-sm leading-[22px] text-sc-muted">
           <span className="flex-1 basis-[260px] max-w-[340px]">{t("智能体不能自己定稿，也不能自己上报，每次都停下来等护士。", "The agent can't finalise or report on its own. It always stops for a nurse.")}</span>
           <span className="flex-1 basis-[260px] max-w-[340px]">{t("只用虚构数据，请不要输入真实院友资料。电话和证件号在送给 AI 之前会被遮掉。", "Fictional data only; please don't enter real resident details. Phone and ID numbers are masked before the AI sees them.")}</span>
-          <span className="flex-1 basis-[260px] max-w-[340px]">{t("不用登录。第一次打开要等几十秒，免费服务器在启动。", "No account needed. The first run can take a while because the free server is waking up.")}</span>
+          <span className="flex-1 basis-[260px] max-w-[340px]">{t("不用登录，右上角「我是」可以切换护工、护士、经理、家属。第一次打开要等几十秒，免费服务器在启动。", "No account needed: switch between carer, nurse, manager and family with “I am” at the top right. The first run can take a while because the free server is waking up.")}</span>
         </div>
       </main>
 
