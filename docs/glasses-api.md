@@ -1,6 +1,6 @@
 # 眼镜对接网站说明（给姐姐）
 
-更新：2026-11-27
+更新：2026-11-27（第二版：加了 Mia、厨房、紧急步骤）
 
 网站这边已经做好了。眼镜按下面的格式发消息，护士台网页会马上响；护士按「马上到」以后，眼镜可以读到回复。
 
@@ -26,7 +26,7 @@
 | `type` | 是 | `call` 叫人、`emergency` 紧急、`meal` 餐盘、`note` 护理记录、`moment` 记一笔 |
 | `text` | 是（有照片时可空） | 一句话，例如「老人说头晕，想请护士来看看」 |
 | `from` | 建议 | 护工名字，例如 `Jane` |
-| `to` | 叫人时 | 叫谁：`["nurse"]`、`["manager"]`、`["Anna"]`，可以几个。紧急不填时默认 `["nurse","manager"]` |
+| `to` | 叫人时 | 叫谁：`["nurse"]`、`["manager"]`、`["Anna"]`、`["kitchen"]`，可以几个。紧急不填时默认 `["nurse","manager"]`。网站没有厨房，`kitchen` 的消息由护士收，护士台会标「发给厨房，护士代收」 |
 | `room` | 建议 | 房号，例如 `"3"` |
 | `resident` | 可选 | 老人名字（没有 room 时用） |
 | `urgent` | 可选 | `true` 会标红 |
@@ -63,7 +63,7 @@ curl -X POST https://agecare-1.onrender.com/api/glasses/events \
 ```
 - 下次把 `since` 设成这次返回的 `now`。
 - `replies` 里 `kind: "coming"` = 马上到，`"done"` = 已处理（这时 `closed` 变 `true`）。
-- **别人叫你**：找 `source` 是 `"web"`、`to` 里有这位护工名字（例如 `"Jane"`）的消息，眼镜念出来就行。
+- **别人叫你**：找 `source` 是 `"web"`、`to` 里有这位护工名字的消息，眼镜念出来就行。网页「叫人」里已经有「护工 Mia（戴眼镜）」，选了就是 `to: ["Mia"]`。
 
 只查一条：`GET /api/glasses/events/<id>`。
 
@@ -72,6 +72,12 @@ curl -X POST https://agecare-1.onrender.com/api/glasses/events \
 {"by":"Jane","kind":"coming"}
 ```
 `kind` 用 `coming`（马上到）或 `done`（已处理）。护工点头回「马上到」时调用这个。
+
+**紧急换步骤**也用这个接口，只带 `step`（可加总步数 `steps`），不带 `kind`：
+```json
+{"by":"Mia","step":3,"steps":6}
+```
+这样不会算成一条回复，只会更新步骤；护士台在这条紧急下面显示「眼镜：第 3 步，共 6 步」。
 
 ## 建议的眼镜流程
 1. 叫护士、紧急、拍餐盘时，`POST` 一条，记下 `id`。
@@ -85,7 +91,10 @@ curl -X POST https://agecare-1.onrender.com/api/glasses/events \
 - 老人面板（`/residents`）：餐盘照片、护理记录、记一笔会进这位老人的时间线，带照片。
 - 交班单：目前还没有自动收眼镜的消息，下一步可以接。
 
-## 想请姐姐确认的
-1. v4 现在「连网页版写记录」用的是网站哪个接口？如果是 `/api/agent/run`，可以继续用；叫人和餐盘请改用上面的新接口。
-2. 你写的「护士页面补丁」和网站现在的护士台（`/station`）是不是同一个东西？是的话我们合并，避免两套。
-3. 正式用之前，请让 Jane 在 Render 的环境变量里设一个自己的 `GLASSES_TOKEN`，不要一直用示范密钥。
+## 已确认（11-27 姐姐回复）
+1. 写记录继续用 `/api/agent/run`；叫人、紧急、餐盘用 `/api/glasses/events`。
+2. 护士页面以网站的 `/station` 为准，眼镜那边的补丁不合并。
+3. Jane 在 Render 设好 `GLASSES_TOKEN` 后告诉姐姐，眼镜改 `WEB_TOKEN` 一行。
+
+## 还没定的
+- 老人名字：网站是 3 王奶奶、5 陳伯、8 陳婆婆、12 李婆婆；眼镜是 W 太太、K 先生、L 太太、H 先生。房号一样，所以消息能对上，只是演示时屏幕上名字不同。

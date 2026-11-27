@@ -51,9 +51,15 @@ export function Station() {
           </span>
           {c.resident && <span className="text-[15px] text-sc-ink-2">{residentLabel(c.resident)}</span>}
           {c.source === "glasses" && <span className="text-[12px] px-2 py-0.5 rounded-full bg-sc-gold-tint text-sc-gold-deep">{t("来自眼镜", "From glasses")}</span>}
+          {!sentByMe && c.to.includes("kitchen") && <span className="text-[12px] px-2 py-0.5 rounded-full border border-sc-line text-sc-ink-2">{t("发给厨房，护士代收", "For the kitchen; nurse receives")}</span>}
           <span className="ml-auto text-[13px] text-sc-muted tabular-nums">{c.at}</span>
         </div>
         <span className={`text-[15px] leading-6 ${c.urgent && !c.closed ? "text-sc-red-text" : "text-sc-ink-2"}`}>{c.text}</span>
+        {c.step && !c.closed && (
+          <span className="text-[13px] text-sc-red-text font-medium">
+            {c.steps ? t(`眼镜：第 ${c.step} 步，共 ${c.steps} 步`, `Glasses: step ${c.step} of ${c.steps}`) : t(`眼镜：第 ${c.step} 步`, `Glasses: step ${c.step}`)}
+          </span>
+        )}
         {c.urgent && !c.closed && (
           <span className="text-[13px] text-sc-red-text">{t("已过", "Elapsed")} <span className="text-[28px] font-light tracking-[-0.03em] tabular-nums align-middle">{since(c.ts, now)}</span></span>
         )}

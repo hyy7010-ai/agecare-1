@@ -85,7 +85,7 @@ export type Reply = { by: string; at: string; kind: "coming" | "done" };
 export type Call = {
   id: string; at: string; ts: number; from: string; to: string[]; resident?: string;
   text: string; urgent?: boolean; replies: Reply[]; seen: string[]; closed?: boolean;
-  remote?: boolean; source?: "glasses" | "web";
+  remote?: boolean; source?: "glasses" | "web"; step?: number; steps?: number;
 };
 
 // Who can be called. Role keys reach everyone with that role; names reach one person.
@@ -94,9 +94,12 @@ export const TARGETS = [
   { key: "manager", zh: "经理", en: "Manager" },
   { key: "Jane", zh: "护工 Jane", en: "Carer Jane" },
   { key: "Anna", zh: "护工 Anna", en: "Carer Anna" },
+  { key: "Mia", zh: "护工 Mia（戴眼镜）", en: "Carer Mia (glasses)" },
 ];
+// The glasses may send to "kitchen"; the web demo has no kitchen, so nurses get those.
+const EXTRA_LABELS = [{ key: "kitchen", zh: "厨房", en: "Kitchen" }];
 export const targetLabel = (key: string, en: boolean) => {
-  const x = TARGETS.find((t) => t.key === key);
+  const x = [...TARGETS, ...EXTRA_LABELS].find((t) => t.key === key);
   return x ? (en ? x.en : x.zh) : key;
 };
 
@@ -122,6 +125,7 @@ export const useCalls = (): Call[] => {
     id: e.id, at: e.at, ts: e.ts, from: e.from, to: e.to, resident: residentOf(e), text: e.text,
     urgent: e.urgent, replies: e.replies, closed: e.closed, seen: seen.filter((k) => k.startsWith(e.id + ":")).map((k) => k.slice(e.id.length + 1)),
     remote: true, source: e.source,
+    step: Number(e.data?.step) || undefined, steps: Number(e.data?.steps) || undefined,
   } as Call));
   const out = [...local.filter((c) => !fromRemote.some((r) => r.id === c.id)), ...fromRemote];
   mergedCache = { l: local, r: rem, seen, out };
@@ -130,7 +134,8 @@ export const useCalls = (): Call[] => {
 const writeCalls = (list: Call[]) => callStore.set(JSON.stringify(list.slice(-40)));
 const hhmm = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
-export const isForMe = (c: Call, me: Identity) => c.from !== me.name && (c.to.includes(me.role) || c.to.includes(me.name));
+export const isForMe = (c: Call, me: Identity) => c.from !== me.name &&
+  (c.to.includes(me.role) || c.to.includes(me.name) || (me.role === "nurse" && c.to.includes("kitchen")));
 export const myReply = (c: Call, me: Identity) => [...c.replies].reverse().find((r) => r.by === me.name);
 
 export function sendCall(me: Identity, to: string[], text: string, resident?: string, urgent?: boolean) {

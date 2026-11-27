@@ -339,9 +339,17 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const replyEvent = (id: string, body: any): DeviceEvent | string => {
     const ev = deviceEvents.find((e) => e.id === id);
     if (!ev) return 'not found';
-    const kind = body.kind === 'done' ? 'done' : 'coming';
-    ev.replies.push({ by: String(body.by || 'Staff').slice(0, 60), at: hhmm(), kind });
-    if (kind === 'done') ev.closed = true;
+    // Glasses can report which step of the emergency guide they are on: {step: 3, steps: 6}.
+    // Sent without `kind`, it only updates the step and adds no reply.
+    const step = Number(body.step);
+    if (Number.isFinite(step) && step > 0) {
+      ev.data = { ...(ev.data || {}), step, ...(Number(body.steps) > 0 ? { steps: Number(body.steps) } : {}) };
+    }
+    if (body.kind || !(step > 0)) {
+      const kind = body.kind === 'done' ? 'done' : 'coming';
+      ev.replies.push({ by: String(body.by || 'Staff').slice(0, 60), at: hhmm(), kind });
+      if (kind === 'done') ev.closed = true;
+    }
     ev.updated = Date.now();
     broadcast(ev);
     return ev;
