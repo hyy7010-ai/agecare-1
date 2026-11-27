@@ -1,3 +1,4 @@
+import { MealPhoto } from "./MealPhoto";
 import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -858,6 +859,7 @@ export function ResidentProfile({
       {tab === "meals" && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-12 mb-12">
           <div className="flex flex-col">
+            <div className="mb-8"><MealPhoto resident={resident} onSave={(url, ai) => onSubmitObservation(url, ai)} /></div>
             <h2 className="text-[26px] font-semibold text-slate-900">{zh ? "饮食" : "Meals"}</h2>
             <div className="mt-4 border-y border-slate-200 divide-y divide-slate-200">
               <div className="py-4 flex justify-between gap-4 text-[15px]">

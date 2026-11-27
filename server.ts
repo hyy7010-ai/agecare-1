@@ -226,6 +226,69 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     }
   });
 
+  // API Route: Meal plate photo -> how much was eaten, rough calories, diet flags.
+  // Visual estimate only; the result goes to the nurse queue before it counts.
+  app.post('/api/meal', async (req, res) => {
+    try {
+      const { image, language = "en", allergies = [], dietNotes = "" } = req.body || {};
+      const m = typeof image === "string" ? image.match(/^data:(image\/[a-z+]+);base64,(.+)$/) : null;
+      if (!m) return res.status(400).json({ error: 'No image uploaded' });
+
+      const prompt = `
+        You are an assistant in an aged care facility looking at a photo of a resident's meal plate after the meal.
+        Estimate visually. Never give medical or dietary advice beyond flagging possible conflicts for the nurse.
+        Resident allergies / restrictions: ${Array.isArray(allergies) && allergies.length ? allergies.join("; ") : "none recorded"}.
+        Other diet notes: ${dietNotes || "none"}.
+        Return JSON with exactly these keys:
+        - foods: list of the foods you can see (short names).
+        - percentEaten: estimated percent of the served meal that was eaten, 0-100, rounded to the nearest 10. If the plate looks untouched use 0; if you cannot tell, give your best estimate and say so in note.
+        - kcalEstimate: rough estimate of calories actually eaten (a whole number). It is a visual estimate only.
+        - mealType: breakfast, lunch, dinner, snack, or unclear.
+        - flags: list of possible conflicts with the allergies or restrictions above (e.g. "contains egg"), or concerns such as very little eaten. Empty list if none.
+        - note: one or two plain sentences a carer could read, describing what was eaten.
+        The values for foods, mealType, flags and note MUST be written in the language for code: ${language}. Keys stay in English.
+      `;
+
+      const response = await generateWithRetry({
+        model: 'gemini-3.5-flash',
+        contents: { parts: [{ text: prompt }, { inlineData: { data: m[2], mimeType: m[1] } }] },
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              foods: { type: Type.ARRAY, items: { type: Type.STRING } },
+              percentEaten: { type: Type.NUMBER },
+              kcalEstimate: { type: Type.NUMBER },
+              mealType: { type: Type.STRING },
+              flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              note: { type: Type.STRING },
+            },
+            required: ["foods", "percentEaten", "kcalEstimate", "flags", "note"],
+          },
+          temperature: 0.2,
+        },
+      });
+
+      let result: any;
+      try {
+        const raw = (response.text || '').replace(/```json\n?/g, '').replace(/```/g, '').trim();
+        result = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+      } catch {
+        return res.status(500).json({ error: 'Failed to parse AI response.' });
+      }
+      const pct = Math.max(0, Math.min(100, Math.round((Number(result.percentEaten) || 0) / 10) * 10));
+      res.json({ result: { ...result, percentEaten: pct, kcalEstimate: Math.max(0, Math.round(Number(result.kcalEstimate) || 0)) } });
+    } catch (error: any) {
+      console.error('Meal analysis error:', error);
+      let errorMsg = error.message || 'Failed to analyse the meal photo';
+      if (errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+        errorMsg = 'AI API rate limit (quota) exceeded. Please wait a moment and try again.';
+      }
+      res.status(500).json({ error: errorMsg });
+    }
+  });
+
   // API Route: Audio Care Note Translation
   app.post('/api/audio-note', upload.single('audioRecording'), async (req, res) => {
     try {

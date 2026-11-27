@@ -29,7 +29,7 @@ export interface Resident {
 }
 
 export interface AIObservationResult {
-  observationType?: "wound" | "excrement" | "care_note";
+  observationType?: "wound" | "excrement" | "care_note" | "meal";
   observation: string;
   estimatedSizeOrType?: string;
   colour?: string;

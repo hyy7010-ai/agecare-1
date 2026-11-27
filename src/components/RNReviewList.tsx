@@ -57,6 +57,7 @@ export function RNReviewList({
   const typeLabel = (k?: string) => {
     if (!k) return zh ? "一般" : "General";
     if (k === "care_note") return zh ? "护理记录" : "Care note";
+    if (k === "meal") return zh ? "餐盘照片" : "Meal photo";
     return k.replace(/_/g, " ");
   };
   const Field = ({ label, value, warn }: { label: string; value?: string; warn?: boolean }) => (
@@ -192,7 +193,7 @@ export function RNReviewList({
                   </>
                 ) : (
                   <>
-                    {selectedReview.aiResult.observationType !== "care_note" && <Field label={zh ? "大小 / 类型" : "Size / type"} value={selectedReview.aiResult.estimatedSizeOrType} />}
+                    {selectedReview.aiResult.observationType !== "care_note" && <Field label={selectedReview.aiResult.observationType === "meal" ? (zh ? "吃了多少 · 热量 · 食物" : "Eaten · calories · foods") : (zh ? "大小 / 类型" : "Size / type")} value={selectedReview.aiResult.estimatedSizeOrType} />}
                     <Field label={zh ? "可能的风险" : "Potential risk"} value={selectedReview.aiResult.potentialRiskFlag} warn />
                     {selectedReview.aiResult.bodyLocation && <Field label={zh ? "部位" : "Location"} value={selectedReview.aiResult.bodyLocation} />}
                   </>
