@@ -44,11 +44,48 @@ const idStore = makeStore("sc_identity", (raw) => IDENTITIES.find((i) => i.id ==
 export const useIdentity = () => useSyncExternalStore(idStore.subscribe, idStore.get, idStore.get);
 export const setIdentity = (id: string) => idStore.set(id);
 
+// ---------- events from the server (glasses and other devices) ----------
+export type DeviceEvent = {
+  id: string; ts: number; updated: number; at: string; source: "glasses" | "web";
+  type: "call" | "emergency" | "meal" | "note" | "moment";
+  from: string; to: string[]; resident?: string; room?: string; text: string;
+  urgent?: boolean; photo?: string; data?: any; replies: Reply[]; closed?: boolean;
+};
+let remote: DeviceEvent[] = [];
+let remoteOk = false;
+const remoteSubs = new Set<() => void>();
+let es: EventSource | null = null;
+const emitRemote = () => { remote = [...remote]; remoteSubs.forEach((f) => f()); };
+const upsert = (ev: DeviceEvent) => {
+  const i = remote.findIndex((e) => e.id === ev.id);
+  if (i >= 0) remote[i] = ev; else remote.push(ev);
+  emitRemote();
+};
+function connectRemote() {
+  if (es || typeof window === "undefined") return;
+  fetch("/api/events").then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => {
+    remoteOk = true; (j.events || []).forEach(upsert); emitRemote();
+  }).catch(() => { remoteOk = false; });
+  try {
+    es = new EventSource("/api/events/stream");
+    es.onmessage = (m) => { try { remoteOk = true; upsert(JSON.parse(m.data)); } catch { /* ignore */ } };
+    es.onerror = () => { /* the browser reconnects by itself */ };
+  } catch { /* no SSE */ }
+}
+export const useRemoteEvents = () => useSyncExternalStore(
+  (cb) => { remoteSubs.add(cb); connectRemote(); return () => remoteSubs.delete(cb); },
+  () => remote, () => remote,
+);
+// Glasses send room numbers; the web demo uses the same rooms (3, 5, 8, 12).
+export const residentOf = (e: { resident?: string; room?: string }) =>
+  RESIDENTS.find((r) => String(r.room) === String(e.room ?? "").replace(/\D/g, ""))?.name || e.resident;
+
 // ---------- calls for help ----------
 export type Reply = { by: string; at: string; kind: "coming" | "done" };
 export type Call = {
   id: string; at: string; ts: number; from: string; to: string[]; resident?: string;
   text: string; urgent?: boolean; replies: Reply[]; seen: string[]; closed?: boolean;
+  remote?: boolean; source?: "glasses" | "web";
 };
 
 // Who can be called. Role keys reach everyone with that role; names reach one person.
@@ -73,7 +110,23 @@ export const residentLabel = (name?: string) => {
 };
 
 const callStore = makeStore<Call[]>("sc_calls", (raw) => { try { return JSON.parse(raw || "[]"); } catch { return []; } });
-export const useCalls = () => useSyncExternalStore(callStore.subscribe, callStore.get, callStore.get);
+const useLocalCalls = () => useSyncExternalStore(callStore.subscribe, callStore.get, callStore.get);
+const seenStore = makeStore<string[]>("sc_seen_remote", (raw) => { try { return JSON.parse(raw || "[]"); } catch { return []; } });
+let mergedCache: { l: Call[]; r: DeviceEvent[]; seen: string[]; out: Call[] } | null = null;
+export const useCalls = (): Call[] => {
+  const local = useLocalCalls();
+  const rem = useRemoteEvents();
+  const seen = useSyncExternalStore(seenStore.subscribe, seenStore.get, seenStore.get);
+  if (mergedCache && mergedCache.l === local && mergedCache.r === rem && mergedCache.seen === seen) return mergedCache.out;
+  const fromRemote: Call[] = rem.filter((e) => e.type === "call" || e.type === "emergency").map((e) => ({
+    id: e.id, at: e.at, ts: e.ts, from: e.from, to: e.to, resident: residentOf(e), text: e.text,
+    urgent: e.urgent, replies: e.replies, closed: e.closed, seen: seen.filter((k) => k.startsWith(e.id + ":")).map((k) => k.slice(e.id.length + 1)),
+    remote: true, source: e.source,
+  } as Call));
+  const out = [...local.filter((c) => !fromRemote.some((r) => r.id === c.id)), ...fromRemote];
+  mergedCache = { l: local, r: rem, seen, out };
+  return out;
+};
 const writeCalls = (list: Call[]) => callStore.set(JSON.stringify(list.slice(-40)));
 const hhmm = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -83,12 +136,28 @@ export const myReply = (c: Call, me: Identity) => [...c.replies].reverse().find(
 export function sendCall(me: Identity, to: string[], text: string, resident?: string, urgent?: boolean) {
   const ts = Date.now();
   const call: Call = { id: `H${String(ts).slice(-6)}`, at: hhmm(), ts, from: me.name, to, resident, text, urgent, replies: [], seen: [] };
-  writeCalls([...callStore.get(), call]);
+  const room = RESIDENTS.find((r) => r.name === resident)?.room;
+  if (remoteOk) {
+    // goes through the server so other phones, computers and glasses see it
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: urgent ? "emergency" : "call", from: me.name, to, resident, room, text, urgent }) })
+      .then((r) => r.json()).then((ev) => { if (ev?.id) { upsert(ev); pendingIds.set(call.id, ev.id); } })
+      .catch(() => writeCalls([...callStore.get(), call]));
+  } else {
+    writeCalls([...callStore.get(), call]);
+  }
   addShift({ id: call.id, kind: "alert", resident, urgent, text: `${me.name} 叫 ${to.join("、")}：${text}`, status: "等回复 Waiting for reply" });
   return call;
 }
+// local call id -> server id, so the sheet that sent it can follow the server copy
+export const pendingIds = new Map<string, string>();
 
 export function replyCall(id: string, me: Identity, kind: Reply["kind"]) {
+  if (remote.some((e) => e.id === id)) {
+    fetch(`/api/events/${id}/reply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: me.name, kind }) })
+      .then((r) => r.json()).then((ev) => ev?.id && upsert(ev)).catch(() => {});
+    return;
+  }
   const at = hhmm();
   writeCalls(callStore.get().map((c) => c.id === id
     ? { ...c, replies: [...c.replies, { by: me.name, at, kind }], closed: c.closed || kind === "done" }
@@ -96,11 +165,19 @@ export function replyCall(id: string, me: Identity, kind: Reply["kind"]) {
   updateShift(id, { status: kind === "done" ? `${me.name} ${at} 已处理 handled` : `${me.name} ${at} 马上到 on the way` });
 }
 
-export const markSeen = (id: string, key: string) =>
+export const markSeen = (id: string, key: string) => {
+  if (remote.some((e) => e.id === id)) { seenStore.set(JSON.stringify([...seenStore.get(), `${id}:${key}`])); return; }
   writeCalls(callStore.get().map((c) => (c.id === id ? { ...c, seen: [...c.seen, key] } : c)));
+};
 
-export const closeCall = (id: string) =>
+export const closeCall = (id: string, by = "Sender") => {
+  if (remote.some((e) => e.id === id)) {
+    fetch(`/api/events/${id}/reply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by, kind: "done" }) })
+      .then((r) => r.json()).then((ev) => ev?.id && upsert(ev)).catch(() => {});
+    return;
+  }
   writeCalls(callStore.get().map((c) => (c.id === id ? { ...c, closed: true } : c)));
+};
 
 // Short beep for a new call. Browsers may block sound until the page has been clicked once.
 export function beep() {

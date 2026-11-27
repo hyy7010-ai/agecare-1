@@ -50,6 +50,7 @@ export function Station() {
             {sentByMe ? t(`你叫了 ${c.to.map((k) => targetLabel(k, false)).join("、")}`, `You called ${c.to.map((k) => targetLabel(k, true)).join(", ")}`) : t(`${c.from} 叫你`, `${c.from} called you`)}
           </span>
           {c.resident && <span className="text-[15px] text-sc-ink-2">{residentLabel(c.resident)}</span>}
+          {c.source === "glasses" && <span className="text-[12px] px-2 py-0.5 rounded-full bg-sc-gold-tint text-sc-gold-deep">{t("来自眼镜", "From glasses")}</span>}
           <span className="ml-auto text-[13px] text-sc-muted tabular-nums">{c.at}</span>
         </div>
         <span className={`text-[15px] leading-6 ${c.urgent && !c.closed ? "text-sc-red-text" : "text-sc-ink-2"}`}>{c.text}</span>
@@ -62,7 +63,7 @@ export function Station() {
           </span>
         )}
         {c.closed ? <span className="text-[13px] text-sc-muted">{t("已结束", "Closed")}</span> : sentByMe ? (
-          <button onClick={() => closeCall(c.id)} className="self-start text-[14px] underline text-sc-ink-2 cursor-pointer">{t("结束这次呼叫", "Close this call")}</button>
+          <button onClick={() => closeCall(c.id, me.name)} className="self-start text-[14px] underline text-sc-ink-2 cursor-pointer">{t("结束这次呼叫", "Close this call")}</button>
         ) : (
           <div className="flex flex-wrap gap-2.5 pt-1">
             {!r && <button onClick={() => replyCall(c.id, me, "coming")} className={`${btnPrimary} min-h-11 ${c.urgent ? "bg-sc-red" : ""}`}>{t("马上到", "On my way")}</button>}
@@ -165,8 +166,8 @@ export function Station() {
           </aside>
         </div>
         <p className="mt-12 text-[13px] leading-5 text-sc-muted max-w-[640px]">
-          {t("示范：呼叫只存在这个浏览器，开几个分页、换不同身份就能看到两边。真正使用时，眼镜和手机会通过服务器互相通知。",
-            "Demo: calls live in this browser only. Open a few tabs with different identities to see both sides. In real use, glasses and phones notify each other through the server.")}
+          {t("呼叫经过服务器传给其他手机、电脑和眼镜。服务器重启后会清空。示范只用虚构资料。",
+            "Calls go through the server to other phones, computers and the glasses. A server restart clears them. Fictional data only.")}
         </p>
       </main>
     </ScPage>

@@ -102,6 +102,7 @@ export function ScPage({ current, children }: { current?: string; children: Reac
               {first.urgent && <span className="w-2 h-2 rounded-full bg-sc-red" aria-hidden="true" />}
               <span className="flex-1 min-w-[240px] text-[15px]">
                 <b className="font-semibold">{t(`${first.from} 叫你`, `${first.from} is calling you`)}</b>
+                {first.source === "glasses" && <span className="ml-2 text-[12px] px-2 py-0.5 rounded-full bg-sc-gold-tint text-sc-gold-deep">{t("来自眼镜", "From glasses")}</span>}
                 {first.resident && <span className="text-sc-ink-2">　{residentLabel(first.resident)}</span>}
                 <span className={first.urgent ? "text-sc-red-text" : "text-sc-ink-2"}>　{first.text}</span>
                 <span className="text-sc-muted text-[13px]">　{first.at}{incoming.length > 1 ? t(`　还有 ${incoming.length - 1} 个`, `  +${incoming.length - 1} more`) : ""}</span>

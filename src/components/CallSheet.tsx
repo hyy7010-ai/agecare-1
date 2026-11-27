@@ -1,6 +1,6 @@
 // "Call for help" sheet: pick who, which resident, what for. After sending, shows replies live.
 import React, { useEffect, useState } from "react";
-import { TARGETS, RESIDENTS, useIdentity, useCalls, sendCall, closeCall, targetLabel } from "../lib/demoStore";
+import { TARGETS, RESIDENTS, useIdentity, useCalls, sendCall, closeCall, targetLabel, pendingIds } from "../lib/demoStore";
 import { useEn, Label, chip, btnPrimary, btnSecondary } from "./ScShell";
 
 const QUICK = [
@@ -28,7 +28,7 @@ export function CallSheet({ onClose }: { onClose: () => void }) {
 
   const targets = TARGETS.filter((x) => x.key !== me.name && x.key !== me.role);
   const toggle = (k: string) => setTo((l) => (l.includes(k) ? l.filter((x) => x !== k) : [...l, k]));
-  const sent = calls.find((c) => c.id === sentId);
+  const sent = calls.find((c) => c.id === sentId || c.id === pendingIds.get(sentId));
 
   const send = () => {
     const c = sendCall(me, to, text.trim(), resident || undefined, urgent);
@@ -98,7 +98,7 @@ export function CallSheet({ onClose }: { onClose: () => void }) {
             <p className="m-0 text-[13px] leading-5 text-sc-muted">{t("想看对方那边：开一个新分页，右上角「我是」换成对方。", "To see the other side: open a new tab and switch “I am” to that person.")}</p>
             <div className="flex gap-2.5">
               <button onClick={onClose} className={`${btnPrimary} flex-1`}>{t("好", "OK")}</button>
-              {!sent.closed && <button onClick={() => { closeCall(sent.id); onClose(); }} className={`${btnSecondary} flex-1`}>{t("不用了", "Cancel call")}</button>}
+              {!sent.closed && <button onClick={() => { closeCall(sent.id, me.name); onClose(); }} className={`${btnSecondary} flex-1`}>{t("不用了", "Cancel call")}</button>}
             </div>
           </div>
         )}

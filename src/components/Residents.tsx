@@ -3,7 +3,7 @@
 // and notes a nurse has confirmed. Fictional residents only.
 import React, { useState } from "react";
 import { ScPage, Label, useEn } from "./ScShell";
-import { useIdentity, useCalls, useMoments, RESIDENTS, targetLabel, Role } from "../lib/demoStore";
+import { useIdentity, useCalls, useMoments, useRemoteEvents, residentOf, RESIDENTS, targetLabel, Role } from "../lib/demoStore";
 import { QuickLog, Timeline, Ev } from "./Timeline";
 import { readShift } from "../lib/shiftLog";
 
@@ -44,6 +44,7 @@ export function Residents() {
   const me = useIdentity();
   const calls = useCalls();
   const moments = useMoments();
+  const remoteEvents = useRemoteEvents();
   const entries = readShift();
   const list = me.role === "family" ? RESIDENTS.filter((r) => r.name === me.resident) : RESIDENTS;
   const fromUrl = new URLSearchParams(window.location.search).get("r") || "";
@@ -83,6 +84,17 @@ export function Residents() {
   }
   if (can("moments")) for (const m of moments.filter((x) => x.resident === cur.name)) {
     events.push({ at: m.at, kind: t(`记一笔 · ${m.by}`, `Quick log · ${m.by}`), text: m.text, photo: m.photo });
+  }
+  // meal photos, notes and quick logs sent from the glasses (calls are already in rCalls)
+  for (const e of remoteEvents.filter((x) => ["meal", "note", "moment"].includes(x.type) && residentOf(x) === cur.name)) {
+    const kind = e.type === "meal" ? t("餐盘", "Meal") : e.type === "note" ? t("护理记录", "Care note") : t("记一笔", "Quick log");
+    const showNote = e.type === "note" ? can("pending") : can("moments");
+    if (!showNote) continue;
+    const d = e.data || {};
+    const sub = e.type === "meal" && (d.percentEaten != null || d.kcalEstimate != null)
+      ? t(`吃了约 ${d.percentEaten ?? "?"}% · 约 ${d.kcalEstimate ?? "?"} 大卡`, `About ${d.percentEaten ?? "?"}% eaten · ~${d.kcalEstimate ?? "?"} kcal`) : undefined;
+    events.push({ at: e.at, kind: `${kind} · ${e.from} · ${t("来自眼镜", "from glasses")}`, text: e.text, sub, photo: e.photo,
+      red: e.type === "meal" && Array.isArray(d.flags) && d.flags.length > 0 });
   }
   events.sort((a, b) => a.at.localeCompare(b.at));
 

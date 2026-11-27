@@ -289,6 +289,116 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Glasses <-> web connection (demo).
+  // The Rokid glasses POST events (calls, emergencies, meal photos, notes) to /api/glasses/events
+  // with a token. The web nurse station reads them live (SSE) and replies "on my way" / "handled";
+  // the glasses poll for replies. Kept in memory: a restart clears it. Fictional data only.
+  // Web routes are open for the public demo; a real deployment must put them behind login.
+  // ---------------------------------------------------------------------------
+  type DeviceEvent = {
+    id: string; ts: number; updated: number; at: string; source: 'glasses' | 'web';
+    type: 'call' | 'emergency' | 'meal' | 'note' | 'moment';
+    from: string; to: string[]; resident?: string; room?: string; text: string;
+    urgent?: boolean; photo?: string; data?: any; deviceId?: string;
+    replies: { by: string; at: string; kind: 'coming' | 'done' }[]; closed?: boolean;
+  };
+  const deviceEvents: DeviceEvent[] = [];
+  const sseClients = new Set<any>();
+  const GLASSES_TOKEN = process.env.GLASSES_TOKEN || 'sunrise-demo';
+  if (!process.env.GLASSES_TOKEN) console.warn('GLASSES_TOKEN not set; using the public demo token "sunrise-demo".');
+  const hhmm = () => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: process.env.TZ || 'Australia/Melbourne' });
+  const broadcast = (ev: DeviceEvent) => { const line = `data: ${JSON.stringify(ev)}\n\n`; sseClients.forEach((r) => r.write(line)); };
+  const TYPES = ['call', 'emergency', 'meal', 'note', 'moment'];
+
+  const addEvent = (body: any, source: 'glasses' | 'web'): DeviceEvent | string => {
+    const type = String(body.type || '');
+    if (!TYPES.includes(type)) return `type must be one of ${TYPES.join(', ')}`;
+    const text = String(body.text || '').slice(0, 2000);
+    if (!text && !body.photo) return 'text or photo is required';
+    let photo: string | undefined;
+    if (typeof body.photo === 'string') {
+      if (!/^data:image\/(jpeg|png|webp);base64,/.test(body.photo)) return 'photo must be a data:image/jpeg|png|webp;base64 URL';
+      if (body.photo.length > 1_500_000) return 'photo too large (keep it under about 1 MB)';
+      photo = body.photo;
+    }
+    const to = Array.isArray(body.to) ? body.to.map(String).slice(0, 10) : (type === 'emergency' ? ['nurse', 'manager'] : type === 'call' ? ['nurse'] : []);
+    const ev: DeviceEvent = {
+      id: `G${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, ts: Date.now(), updated: Date.now(), at: hhmm(), source,
+      type: type as DeviceEvent['type'], from: String(body.from || (source === 'glasses' ? 'Glasses' : 'Web')).slice(0, 60),
+      to, resident: body.resident ? String(body.resident).slice(0, 60) : undefined, room: body.room != null ? String(body.room).slice(0, 10) : undefined,
+      text, urgent: type === 'emergency' || !!body.urgent, photo, data: body.data && typeof body.data === 'object' ? body.data : undefined,
+      deviceId: body.deviceId ? String(body.deviceId).slice(0, 60) : undefined, replies: [],
+      closed: !['call', 'emergency'].includes(type),
+    };
+    deviceEvents.push(ev);
+    if (deviceEvents.length > 300) deviceEvents.splice(0, deviceEvents.length - 300);
+    broadcast(ev);
+    return ev;
+  };
+  const replyEvent = (id: string, body: any): DeviceEvent | string => {
+    const ev = deviceEvents.find((e) => e.id === id);
+    if (!ev) return 'not found';
+    const kind = body.kind === 'done' ? 'done' : 'coming';
+    ev.replies.push({ by: String(body.by || 'Staff').slice(0, 60), at: hhmm(), kind });
+    if (kind === 'done') ev.closed = true;
+    ev.updated = Date.now();
+    broadcast(ev);
+    return ev;
+  };
+  const glassesAuth = (req: any, res: any, next: any) => {
+    const h = String(req.headers.authorization || '');
+    if (h === `Bearer ${GLASSES_TOKEN}`) return next();
+    res.status(401).json({ error: 'Missing or wrong token. Send header: Authorization: Bearer <GLASSES_TOKEN>' });
+  };
+  const since = (q: any) => { const n = Number(q.since); return Number.isFinite(n) ? n : 0; };
+
+  // Glasses (token required)
+  app.post('/api/glasses/events', glassesAuth, (req, res) => {
+    const r = addEvent(req.body || {}, 'glasses');
+    if (typeof r === 'string') return res.status(400).json({ error: r });
+    res.json({ id: r.id, at: r.at, ts: r.ts });
+  });
+  app.get('/api/glasses/events', glassesAuth, (req, res) => {
+    const t = since(req.query);
+    // everything created or answered after `since` (ms); photos left out to keep it small
+    res.json({ now: Date.now(), events: deviceEvents.filter((e) => e.updated > t).map(({ photo, ...e }) => e) });
+  });
+  app.get('/api/glasses/events/:id', glassesAuth, (req, res) => {
+    const ev = deviceEvents.find((e) => e.id === req.params.id);
+    if (!ev) return res.status(404).json({ error: 'not found' });
+    const { photo, ...rest } = ev;
+    res.json(rest);
+  });
+  app.post('/api/glasses/events/:id/reply', glassesAuth, (req, res) => {
+    const r = replyEvent(req.params.id, req.body || {});
+    if (typeof r === 'string') return res.status(404).json({ error: r });
+    res.json({ ok: true });
+  });
+
+  // Web (open for the public demo)
+  app.get('/api/events', (req, res) => {
+    const t = since(req.query);
+    res.json({ now: Date.now(), events: deviceEvents.filter((e) => e.updated > t) });
+  });
+  app.post('/api/events', (req, res) => {
+    const r = addEvent(req.body || {}, 'web');
+    if (typeof r === 'string') return res.status(400).json({ error: r });
+    res.json(r);
+  });
+  app.post('/api/events/:id/reply', (req, res) => {
+    const r = replyEvent(req.params.id, req.body || {});
+    if (typeof r === 'string') return res.status(404).json({ error: r });
+    res.json(r);
+  });
+  app.get('/api/events/stream', (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.write(': connected\n\n');
+    sseClients.add(res);
+    const ping = setInterval(() => res.write(': ping\n\n'), 25000);
+    req.on('close', () => { clearInterval(ping); sseClients.delete(res); });
+  });
+
   // API Route: Audio Care Note Translation
   app.post('/api/audio-note', upload.single('audioRecording'), async (req, res) => {
     try {
