@@ -48,35 +48,40 @@ export function Dashboard({
 
   const hasDeidentified = filteredResidents.some((r) => (r as any).deidentified);
 
+  const today = new Date().toLocaleDateString(lang === "zh" ? "zh-CN" : "en-AU", { weekday: "long", month: "long", day: "numeric" });
+  const dot = (s: "green" | "yellow" | "red") => (s === "green" ? "bg-emerald-500" : s === "yellow" ? "bg-amber-400" : "bg-red-500");
+
   return (
-    <div className="space-y-8 font-light relative z-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="relative z-10 flex flex-col gap-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-bold text-slate-800 tracking-tight font-heading">
+          <span className="text-[13px] text-slate-500">{today}</span>
+          <h1 className="mt-1 text-[40px] leading-[48px] font-semibold text-slate-900">
             {t('live_dashboard') as any || "Live Dashboard"}
           </h1>
-          <p className="text-slate-500 font-medium mt-2 text-base">
+          <p className="text-slate-500 mt-2 text-base">
             {t('real_time_overview') as any || "Real-time resident wellness overview"}
           </p>
         </div>
 
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={(t('find_resident') as any) || "Find resident..."}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium placeholder-slate-400 text-base shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
+              aria-label={(t('find_resident') as any) || "Find resident"}
+              className="w-full pl-7 pr-2 py-2.5 bg-transparent border-0 border-b border-slate-300 focus:outline-none focus:border-slate-900 placeholder-slate-400 text-base"
             />
           </div>
           {canLogSirs && (
             <button
               onClick={onNewReport}
-              className="hidden md:flex items-center gap-2 px-6 py-3 bg-rose-600 text-white font-bold text-lg rounded-xl hover:bg-rose-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 focus:ring-4 focus:ring-rose-500/30"
+              className="hidden md:inline-flex items-center gap-2 min-h-11 px-5 rounded-full bg-red-500 text-white font-semibold text-[15px] hover:bg-red-600 transition-colors"
             >
-              <ShieldAlert className="w-6 h-6" />
+              <ShieldAlert className="w-4 h-4" />
               {(t('log_sirs_incident') as any) || "Log SIRS Incident"}
             </button>
           )}
@@ -84,184 +89,109 @@ export function Dashboard({
       </div>
 
       {hasDeidentified && (
-        <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/30 border border-indigo-100 rounded-3xl p-6 flex items-start gap-5 shadow-sm animate-in fade-in slide-in-from-top-4">
-          <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center shrink-0 border border-indigo-200 shadow-inner">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <div>
-            <h4 className="font-bold text-indigo-950 text-base flex items-center gap-2">
-              <span>{lang === "zh" ? "🔒 澳大利亚隐私法（APP 11）班次数据隔离保护中" : "🔒 Aussie Privacy Act (APP 11) Least-Privilege Shift Isolation Active"}</span>
-              <span className="text-[10px] uppercase tracking-wider bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full font-bold">Compliant</span>
-            </h4>
-            <p className="text-sm text-indigo-800/80 mt-1 font-medium leading-relaxed">
-              {lang === "zh"
-                ? "系统当前以注册护士(RN)及护工排班授权限制。您作为护工仅分配了 Joyce 和 Arthur (Room 101/102) 的班次。其他不属于当前班次的居民个人信息已被自动去标识化，以保障隐私合规并防范未经授权的 PII 数据泄露。"
-                : "The system restricts caregiver access based on rostered shifts. You are only rostered to Joyce and Arthur (Room 101/102). Other residents' names and clinical history have been dynamically de-identified to prevent unauthorized PII disclosure."}
-            </p>
-          </div>
+        <div className="flex items-start gap-3 py-4 border-y border-slate-200 text-[14px] leading-6 text-slate-600">
+          <svg className="w-4 h-4 mt-1 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <p className="m-0">
+            <span className="font-semibold text-slate-900">{lang === "zh" ? "班次数据隔离已开启（澳洲隐私法 APP 11）。" : "Shift isolation is on (Privacy Act, APP 11). "}</span>
+            {lang === "zh"
+              ? "你这个班只负责 Joyce 和 Arthur（101、102 号房），其他老人的名字和病史已自动隐去。"
+              : "You are rostered to Joyce and Arthur (Rooms 101 and 102). Other residents' names and history are hidden."}
+          </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {filteredResidents.map((resident) => (
-          <div
-            key={resident.id}
-            onClick={() => onResidentClick(resident.id)}
-            className="group block w-full text-left bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-indigo-300 hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 relative overflow-hidden"
-          >
-            {/* Subtle gradient overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 to-indigo-50/0 group-hover:from-indigo-50/50 group-hover:to-white/50 transition-colors duration-500 -z-10" />
-            
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-5">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 text-indigo-700 flex items-center justify-center text-xl font-bold border border-indigo-100/50 shadow-sm shadow-indigo-100/50 group-hover:scale-105 transition-transform duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {filteredResidents.map((resident) => {
+          const bath = resident.bathStatus === "done" ? "green" : resident.bathStatus === "due" ? "yellow" : "red";
+          const meal = resident.mealStatus === "eaten" ? "green" : resident.mealStatus === "assisted" ? "yellow" : "red";
+          const toilet = resident.toiletStatus === "independent" ? "green" : resident.toiletStatus === "assisted" ? "yellow" : "red";
+          const items: [string, "green" | "yellow" | "red", string, "bath" | "meal" | "toilet"][] = [
+            [t('bath'), bath, t(resident.bathStatus as any) || resident.bathStatus, "bath"],
+            [t('meal'), meal, t(resident.mealStatus as any) || resident.mealStatus, "meal"],
+            [t('toilet'), toilet, t(resident.toiletStatus as any) || resident.toiletStatus, "toilet"],
+          ];
+          return (
+            <div
+              key={resident.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onResidentClick(resident.id)}
+              onKeyDown={(e) => { if (e.key === "Enter") onResidentClick(resident.id); }}
+              className="group text-left bg-white rounded-[24px] border border-slate-200 p-7 hover:border-amber-400 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              <div className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 rounded-full bg-indigo-50 text-slate-900 flex items-center justify-center text-lg font-heading font-semibold">
                     {getInitials(resident.name)}
                   </div>
-                  <div
-                    className={`absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full border-[3px] border-white shadow-sm ${
-                      resident.statusColor === "red"
-                        ? "bg-rose-500"
-                        : resident.statusColor === "yellow"
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
-                    }`}
-                  ></div>
+                  <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${dot(resident.statusColor as any)}`} aria-hidden="true" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-2xl text-slate-800 font-heading tracking-tight group-hover:text-indigo-700 transition-colors">
-                    {resident.name}
-                  </h3>
-                  <p className="text-sm font-medium text-slate-500 mt-1 uppercase tracking-wider">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-heading font-semibold text-[24px] leading-8 text-slate-900 truncate">{resident.name}</h3>
+                  <p className="text-[13px] text-slate-500">
                     {t('room_prefix')} {resident.room.replace('Room ', '').replace('房间号 ', '').replace('Kwarto ', '')}
                   </p>
                 </div>
+                <span className="text-xl text-amber-600 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
               </div>
-            </div>
 
-            {/* Status indicators */}
-            <div className="grid grid-cols-3 gap-3 mt-2 pt-4 border-t border-slate-100">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-slate-500 uppercase font-medium tracking-wider">
-                  {t('bath')}
-                </span>
-                <StatusBadge
-                  status={
-                    resident.bathStatus === "done"
-                      ? "green"
-                      : resident.bathStatus === "due"
-                        ? "yellow"
-                        : "red"
-                  }
-                  label={t(resident.bathStatus as any) || resident.bathStatus}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onQuickLog) {
-                      onQuickLog(resident.id, "bath");
-                    }
-                  }}
-                />
+              <div className="mt-6 grid grid-cols-3 border-y border-slate-200">
+                {items.map(([label, st, value, task], i) => (
+                  <button
+                    key={task}
+                    onClick={(e) => { e.stopPropagation(); onQuickLog?.(resident.id, task); }}
+                    className={`text-left py-3.5 ${i > 0 ? "pl-4 border-l border-slate-200" : ""} hover:bg-slate-50 transition-colors cursor-pointer`}
+                  >
+                    <span className="block text-[13px] text-slate-500">{label}</span>
+                    <span className="mt-1 flex items-center gap-2 text-[15px] text-slate-900">
+                      <span className={`w-2 h-2 rounded-full ${dot(st)}`} aria-hidden="true" />{value}
+                    </span>
+                  </button>
+                ))}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-slate-500 uppercase font-medium tracking-wider">
-                  {t('meal')}
-                </span>
-                <StatusBadge
-                  status={
-                    resident.mealStatus === "eaten"
-                      ? "green"
-                      : resident.mealStatus === "assisted"
-                        ? "yellow"
-                        : "red"
-                  }
-                  label={t(resident.mealStatus as any) || resident.mealStatus}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onQuickLog) {
-                      onQuickLog(resident.id, "meal");
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-slate-500 uppercase font-medium tracking-wider">
-                  {t('toilet')}
-                </span>
-                <StatusBadge
-                  status={
-                    resident.toiletStatus === "independent"
-                      ? "green"
-                      : resident.toiletStatus === "assisted"
-                        ? "yellow"
-                        : "red"
-                  }
-                  label={t(resident.toiletStatus as any) || resident.toiletStatus}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onQuickLog) {
-                      onQuickLog(resident.id, "toilet");
-                    }
-                  }}
-                />
-              </div>
-            </div>
 
-            <CareMinutesSlider 
-              resident={resident} 
-              onUpdate={onUpdateCareMinutes}
-              label={t('care_minutes')}
-            />
-          </div>
-        ))}
+              <CareMinutesSlider resident={resident} onUpdate={onUpdateCareMinutes} label={t('care_minutes')} />
+            </div>
+          );
+        })}
       </div>
 
       {isCaregiver && (
-        <div className="mt-12 bg-white/80 backdrop-blur-sm rounded-3xl border border-slate-200/60 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100">
-            <h2 className="text-xl font-bold text-slate-800 font-heading tracking-tight">{t('my_submitted_observations')}</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">{t('track_observation_status')}</p>
-          </div>
-          <div className="p-0">
-            {pendingReviews.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 font-light text-sm">
-                {t('no_pending_observations')}
-              </div>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {pendingReviews.map((review) => (
-                  <li 
-                    key={review.id} 
-                    className="p-6 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-4 justify-between items-start md:items-center cursor-pointer hover:shadow-sm"
-                    onClick={() => setSelectedReview(review)}
-                  >
-                    <div>
-                      <h4 className="font-medium text-slate-800">{review.residentName}</h4>
-                      <p className="text-sm text-slate-500 mt-1 line-clamp-1">{review.aiResult?.observation || "Image submission"}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-                          {new Date(review.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-sm font-medium shrink-0">
-                      <Clock className="w-4 h-4" />
-                      {t('waiting_rn_review')}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <div className="flex flex-col">
+          <h2 className="text-[26px] font-semibold text-slate-900">{t('my_submitted_observations')}</h2>
+          <p className="text-[15px] text-slate-500 mt-1 mb-4">{t('track_observation_status')}</p>
+          {pendingReviews.length === 0 ? (
+            <p className="m-0 py-4 border-y border-slate-200 text-[15px] text-slate-500">{t('no_pending_observations')}</p>
+          ) : (
+            <ul className="m-0 p-0 list-none border-b border-slate-200">
+              {pendingReviews.map((review) => (
+                <li
+                  key={review.id}
+                  className="py-4 border-t border-slate-200 flex flex-col md:flex-row gap-3 justify-between md:items-center cursor-pointer hover:bg-slate-100/60 transition-colors px-2 -mx-2 rounded-lg"
+                  onClick={() => setSelectedReview(review)}
+                >
+                  <div className="min-w-0">
+                    <span className="text-[13px] text-slate-500 tabular-nums">{new Date(review.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <h4 className="text-[16px] font-semibold text-slate-900">{review.residentName}</h4>
+                    <p className="text-[15px] text-slate-600 mt-0.5 line-clamp-1">{review.aiResult?.observation || "Image submission"}</p>
+                  </div>
+                  <span className="flex items-center gap-2 text-[14px] text-amber-700 shrink-0">
+                    <Clock className="w-4 h-4" />{t('waiting_rn_review')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
-      
+
       {selectedReview && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-xl animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
-              <h3 className="font-semibold text-slate-800">Observation Details</h3>
+        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-50 rounded-[24px] max-w-lg w-full overflow-hidden">
+            <div className="flex justify-between items-center px-6 pt-6 pb-2">
+              <h3 className="text-[22px] font-semibold text-slate-900">Observation Details</h3>
               <button 
                 onClick={() => setSelectedReview(null)}
                 className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
@@ -290,9 +220,9 @@ export function Dashboard({
                 </div>
               )}
               
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                <h5 className="text-xs font-bold uppercase tracking-wider text-indigo-800 mb-2">AI Analysis</h5>
-                <p className="text-sm text-indigo-900 leading-relaxed">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <h5 className="text-[13px] text-slate-500 mb-2">AI Analysis</h5>
+                <p className="text-[15px] text-slate-900 leading-relaxed">
                   {selectedReview.aiResult?.observation || "No analysis available."}
                 </p>
                 
@@ -313,10 +243,10 @@ export function Dashboard({
               </div>
             </div>
             
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <div className="px-6 pb-6 flex justify-end">
               <button
                 onClick={() => setSelectedReview(null)}
-                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium text-sm shadow-sm"
+                className="min-h-11 px-6 bg-slate-900 text-white rounded-full hover:bg-slate-700 transition-colors font-semibold text-[15px]"
               >
                 Close
               </button>
@@ -337,6 +267,7 @@ function CareMinutesSlider({
   onUpdate?: (id: string, mins: number) => void;
   label: string;
 }) {
+  const { lang } = useLanguage();
   const [localValue, setLocalValue] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -357,56 +288,49 @@ function CareMinutesSlider({
     setIsEditing(false);
   };
 
+  const done = displayValue / resident.careMinutesTarget >= 1;
   return (
-    <div className="mt-8 pt-6 border-t border-slate-100/60" onClick={e => e.stopPropagation()}>
-      <div className="flex justify-between items-end mb-3">
-        <span className="text-sm text-slate-500 font-semibold tracking-wider uppercase">{label}</span>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <input 
-                type="number"
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onBlur={handleEditSubmit}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleEditSubmit();
-                  if (e.key === 'Escape') setIsEditing(false);
-                }}
-                autoFocus
-                onClick={e => e.stopPropagation()}
-                className="w-16 px-2 py-1 text-sm border border-indigo-200 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold text-slate-800"
-              />
-              <span className="text-base text-slate-400 font-medium">/ {resident.careMinutesTarget}m</span>
-            </div>
-          ) : (
-            <div 
-              className="group/edit flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 px-2 py-1 -mr-2 rounded-lg transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setInputValue(displayValue.toString());
-                setIsEditing(true);
+    <div className="mt-6" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-end mb-2">
+        <span className="text-[13px] text-slate-500">{label}</span>
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onBlur={handleEditSubmit}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleEditSubmit();
+                if (e.key === 'Escape') setIsEditing(false);
               }}
-            >
-              <span className="font-bold text-slate-800 text-xl font-heading">
-                {displayValue} <span className="text-base text-slate-400 font-medium">/ {resident.careMinutesTarget}m</span>
-              </span>
-              <Edit2 className="w-4 h-4 text-slate-300 group-hover/edit:text-indigo-500 transition-colors" />
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="relative h-6 w-full group flex items-center">
-        <div className="absolute left-0 right-0 h-3 my-auto bg-slate-100/80 rounded-full overflow-hidden shadow-inner pointer-events-none">
-          <div
-            className={`absolute left-0 top-0 h-full rounded-full transition-all duration-150 ${
-              displayValue / resident.careMinutesTarget >= 1
-                ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
-                : "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
-            }`}
-            style={{
-              width: `${Math.min((displayValue / maxMins) * 100, 100)}%`,
+              autoFocus
+              onClick={e => e.stopPropagation()}
+              aria-label={label}
+              className="w-20 px-2 py-1 text-xl border-0 border-b border-slate-900 bg-transparent outline-none text-right font-light text-slate-900 tabular-nums"
+            />
+            <span className="text-[15px] text-slate-500">/ {resident.careMinutesTarget}</span>
+          </div>
+        ) : (
+          <button
+            className="group/edit flex items-baseline gap-1.5 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInputValue(displayValue.toString());
+              setIsEditing(true);
             }}
+          >
+            <span className="text-[36px] leading-none font-light tracking-[-0.03em] text-slate-900 tabular-nums">{displayValue}</span>
+            <span className="text-[15px] text-slate-500 tabular-nums">/ {resident.careMinutesTarget} {lang === "zh" ? "分钟" : "min"}</span>
+            <Edit2 className="w-3.5 h-3.5 text-slate-300 group-hover/edit:text-slate-600 transition-colors self-center" />
+          </button>
+        )}
+      </div>
+      <div className="relative h-6 w-full flex items-center">
+        <div className="absolute left-0 right-0 h-1 my-auto bg-slate-200 rounded-full overflow-hidden pointer-events-none">
+          <div
+            className={`absolute left-0 top-0 h-full rounded-full transition-all duration-150 ${done ? "bg-emerald-500" : "bg-amber-400"}`}
+            style={{ width: `${Math.min((displayValue / maxMins) * 100, 100)}%` }}
           ></div>
         </div>
         <input
@@ -414,6 +338,7 @@ function CareMinutesSlider({
           min="0"
           max={maxMins}
           value={displayValue}
+          aria-label={label}
           onChange={(e) => {
             e.stopPropagation();
             setLocalValue(parseInt(e.target.value, 10));
@@ -432,33 +357,13 @@ function CareMinutesSlider({
           }}
           onClick={(e) => e.stopPropagation()}
           className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer
-            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
-            [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 
-            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform
-            [&::-webkit-slider-thumb]:hover:scale-125
-            [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-white 
-            [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-indigo-500 [&::-moz-range-thumb]:rounded-full 
-            [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-125"
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+            [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-900
+            [&::-webkit-slider-thumb]:rounded-full
+            [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-white
+            [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-900 [&::-moz-range-thumb]:rounded-full"
         />
       </div>
-    </div>
-  );
-}
-
-function StatusBadge({ status, label, onClick }: { status: "green" | "yellow" | "red", label: string, onClick?: (e: React.MouseEvent) => void }) {
-  const colorClasses = 
-    status === "green"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : status === "yellow"
-        ? "bg-amber-50 text-amber-700 border-amber-200"
-        : "bg-red-50 text-red-700 border-red-200";
-
-  return (
-    <div 
-      onClick={onClick}
-      className={`px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider text-center w-full shadow-sm ${onClick ? 'cursor-pointer hover:brightness-95 transition-all active:scale-95' : ''} ${colorClasses}`}
-    >
-      {label}
     </div>
   );
 }

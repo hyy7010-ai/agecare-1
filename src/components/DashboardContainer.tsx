@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ShieldAlert, Activity, Users, Bell, LogOut, Loader2, FileText, X, Globe, WifiOff, ArrowRight } from "lucide-react";
+import { ShieldAlert, Bell, LogOut, Loader2, FileText, X, Globe, WifiOff, ArrowRight } from "lucide-react";
 import { Dashboard } from "./Dashboard";
 import { ResidentProfile } from "./ResidentProfile";
 import { SirsReporter } from "./SirsReporter";
@@ -672,30 +672,26 @@ export const DashboardContainer: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Simulator Tools Bar (Top) */}
-      <div className="bg-slate-800 text-white px-4 py-2 text-xs flex flex-wrap items-center justify-between z-50 relative border-b border-slate-900 shadow-sm gap-2">
+      {/* Demo tools (simulator) — kept, but quiet */}
+      <div className="bg-slate-100 border-b border-slate-200 text-slate-600 px-4 sm:px-8 py-1.5 text-[12px] flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <span className="font-bold tracking-wider uppercase text-slate-300">{t('simulator')}</span>
+          <span className="text-slate-500">{t('simulator')}</span>
           {adminViewAsSwitcher}
         </div>
-        <div className="flex flex-wrap gap-2">
-            <button 
-              onClick={() => setShiftIsolation(prev => !prev)} 
-              className={`px-3 py-1 rounded border transition-colors font-semibold ${
-                shiftIsolation 
-                  ? "bg-indigo-500 text-white border-indigo-400" 
-                  : "bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500 hover:text-white border-indigo-500/30"
-              }`}
-              title="Toggle Strict Role/Shift Isolation & De-identification under Privacy Act 1988 (APP 11)"
-            >
-              🔒 {shiftIsolation ? (lang === "zh" ? "班次数据隔离：开启 (APP 11合规)" : "Shift Isolation: ACTIVE (APP 11)") : (lang === "zh" ? "班次数据隔离：测试全显" : "Shift Isolation: DISABLED")}
-            </button>
-            <button onClick={simulateFallAlert} className="bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border border-red-500/30 px-3 py-1 rounded transition-colors font-medium">
-              {t('trigger_iot_fall_alert')}
-            </button>
-            <button onClick={() => setIsRnCoverageLost(prev => !prev)} className="bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-white border border-amber-500/30 px-3 py-1 rounded transition-colors font-medium">
-              {t('toggle_rn_coverage_alert')}
-            </button>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setShiftIsolation(prev => !prev)}
+            className={`px-3 py-1 rounded-full border transition-colors ${shiftIsolation ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-500"}`}
+            title="Toggle Strict Role/Shift Isolation & De-identification under Privacy Act 1988 (APP 11)"
+          >
+            {shiftIsolation ? (lang === "zh" ? "班次数据隔离：开" : "Shift isolation: on") : (lang === "zh" ? "班次数据隔离：关" : "Shift isolation: off")}
+          </button>
+          <button onClick={simulateFallAlert} className="px-3 py-1 rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors">
+            {t('trigger_iot_fall_alert')}
+          </button>
+          <button onClick={() => setIsRnCoverageLost(prev => !prev)} className="px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-700 hover:border-slate-500 transition-colors">
+            {t('toggle_rn_coverage_alert')}
+          </button>
         </div>
       </div>
 
@@ -708,26 +704,26 @@ export const DashboardContainer: React.FC = () => {
       )}
       {/* Top Navigation Bar */}
       <nav className="bg-slate-50/90 backdrop-blur-md border-b border-slate-200 select-none sticky top-0 z-50">
-        <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 min-h-[72px] py-2 flex flex-wrap items-center justify-between gap-y-2">
           <div
             className="flex items-center gap-3 cursor-pointer min-w-0 group"
             onClick={() => setCurrentScreen("dashboard")}
           >
             <img src="/sunrise-care-mark.svg" width={30} height={30} alt="" aria-hidden="true" className="shrink-0" />
-            <span className="font-bold text-slate-800 text-xl tracking-tight truncate hidden sm:block font-heading">
+            <span className="font-semibold text-slate-900 text-[22px] truncate hidden sm:block font-heading">
               {t('app_title')}
             </span>
-            <span className="font-bold text-slate-800 text-lg tracking-tight truncate sm:hidden font-heading">
+            <span className="font-semibold text-slate-900 text-lg truncate sm:hidden font-heading">
               {t('app_title_short')}
             </span>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-8">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5">
             <div className="hidden sm:block text-sm text-right">
-              <span className="block font-bold text-slate-900">
+              <span className="block font-semibold text-slate-900">
                 {userProfile?.displayName}
               </span>
-              <span className="block text-slate-500 font-medium capitalize mt-0.5">
+              <span className="block text-[13px] text-slate-500 capitalize">
                 {isRealAdmin && viewAsRole
                   ? `${userProfile?.role} → ${effectiveRole}`
                   : userProfile?.role}
@@ -777,66 +773,32 @@ export const DashboardContainer: React.FC = () => {
 
             {canAccessRoster && (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleGenerateHandover}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 sm:px-3 py-1.5 rounded-md hover:bg-indigo-100 transition-all font-sans shrink-0"
-                >
-                  <FileText className="w-3.5 h-3.5 hidden sm:block" />
-                  <span className="text-xs font-medium">{t('handover')}</span>
+                <button onClick={handleGenerateHandover} className="text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 border-transparent text-slate-600 hover:text-slate-900">
+                  {t('handover')}
                 </button>
-                <button
-                  onClick={() => setCurrentScreen("staff")}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-all font-sans shrink-0"
-                >
-                  <Users className="w-3.5 h-3.5 text-slate-500 hidden sm:block" />
-                  <span className="text-xs font-normal text-slate-600">
-                    {t('staff')}
-                  </span>
+                <button onClick={() => setCurrentScreen("staff")} className={`text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 ${currentScreen === "staff" ? "border-amber-400 text-slate-900 font-semibold" : "border-transparent text-slate-600 hover:text-slate-900"}`}>
+                  {t('staff')}
                 </button>
-                <button
-                  onClick={() => setCurrentScreen("roster")}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-all font-sans shrink-0"
-                >
-                  <Users className="w-3.5 h-3.5 text-slate-500 hidden sm:block" />
-                  <span className="text-xs font-normal text-slate-600">
-                    {t('roster')}
-                  </span>
+                <button onClick={() => setCurrentScreen("roster")} className={`text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 ${currentScreen === "roster" ? "border-amber-400 text-slate-900 font-semibold" : "border-transparent text-slate-600 hover:text-slate-900"}`}>
+                  {t('roster')}
                 </button>
               </div>
             )}
             
             {canDismissSirs && (
-              <button
-                onClick={() => setCurrentScreen("sirsReview")}
-                className="flex items-center gap-1.5 sm:gap-2 bg-red-50 border border-red-200 px-2 sm:px-3 py-1.5 rounded-md hover:bg-red-100 hover:border-red-300 transition-all font-sans shrink-0"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-red-600 hidden sm:block" />
-                <span className="text-xs font-bold text-red-700">
-                  {t('sirs_hub')}
-                </span>
+              <button onClick={() => setCurrentScreen("sirsReview")} className={`text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 ${currentScreen === "sirsReview" ? "border-red-500" : "border-transparent"} text-red-600 font-semibold hover:text-red-700`}>
+                {t('sirs_hub')}
               </button>
             )}
 
             {(isAdmin || isManager) && (
-              <button
-                onClick={() => setCurrentScreen("admin")}
-                className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-md hover:bg-slate-100 hover:border-slate-300 transition-all font-sans shrink-0 mr-2"
-              >
-                <Activity className="w-3.5 h-3.5 text-indigo-600 hidden sm:block" />
-                <span className="text-xs font-medium text-slate-700">
-                  {t('exec_view')}
-                </span>
+              <button onClick={() => setCurrentScreen("admin")} className={`text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 ${currentScreen === "admin" ? "border-amber-400 text-slate-900 font-semibold" : "border-transparent text-slate-600 hover:text-slate-900"}`}>
+                {t('exec_view')}
               </button>
             )}
             {isAdmin && (
-              <button
-                onClick={() => setCurrentScreen("platform")}
-                className="flex items-center gap-1.5 sm:gap-2 bg-indigo-600 text-white border border-indigo-700 px-2 sm:px-3 py-1.5 rounded-md hover:bg-indigo-700 transition-all font-sans shrink-0 mr-2 shadow-sm"
-              >
-                <Globe className="w-3.5 h-3.5 hidden sm:block" />
-                <span className="text-xs font-bold">
-                  Platform Hub
-                </span>
+              <button onClick={() => setCurrentScreen("platform")} className={`text-[14px] min-h-9 px-1 border-b-2 transition-colors shrink-0 ${currentScreen === "platform" ? "border-amber-400 text-slate-900 font-semibold" : "border-transparent text-slate-600 hover:text-slate-900"}`}>
+                Platform Hub
               </button>
             )}
 
@@ -853,7 +815,7 @@ export const DashboardContainer: React.FC = () => {
 
       {/* RN Coverage Alert */}
       {isRnCoverageLost && (
-        <div className="bg-red-50 border-b border-red-200 py-3 px-4 sm:px-6 lg:px-8 relative z-40 flex items-center justify-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-4">
+        <div className="bg-red-50 border-b border-red-200 py-3 px-4 sm:px-8 relative z-40 flex items-center justify-center gap-3">
           <ShieldAlert className="w-5 h-5 text-red-600 animate-pulse shrink-0" />
           <div className="text-red-800 text-sm font-medium">
             {t('critical_alert_rn_coverage')}
@@ -919,7 +881,7 @@ export const DashboardContainer: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <main className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-10 pb-24">
         {currentScreen === "dashboard" && (
           <Dashboard
             residents={visibleResidents}

@@ -51,6 +51,8 @@ export function ResidentProfile({
   const { userProfile } = useAuth();
   const { t, lang } = useLanguage();
   const language = lang;
+  const [tab, setTab] = useState("today");
+  const [histFilter, setHistFilter] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<AIObservationResult | null>(null);
@@ -725,162 +727,241 @@ export function ResidentProfile({
     return lower.includes('bleeding') || lower.includes('cyanosis') || lower.includes('breathing') || lower.includes('severe');
   };
 
+  const statusLabel = resident.statusColor === "green" ? (lang === "zh" ? "状态良好" : "Stable")
+    : resident.statusColor === "yellow" ? (lang === "zh" ? "需要留意" : "Watch") : (lang === "zh" ? "需要处理" : "Needs attention");
+  const statusDot = resident.statusColor === "green" ? "bg-emerald-500" : resident.statusColor === "yellow" ? "bg-amber-400" : "bg-red-500";
+  const hhmm = (ts: any) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const zh = lang === "zh";
+  const evText = (e: any) => e.aiResult?.observation || e.observation || "Care task logged";
+  // Records carry no task type, so infer one from the content.
+  const kindOf = (e: any) => {
+    const txt = evText(e).toLowerCase();
+    if (/进餐|吃|餐|meal|ate|lunch|dinner|breakfast|food/.test(txt)) return "meal";
+    if (/洗浴|洗澡|bath|shower/.test(txt)) return "bath";
+    if (/如厕|厕所|toilet|pad/.test(txt)) return "toilet";
+    if (/血糖|glucose|bgl/.test(txt)) return "glucose";
+    if (e.photoUrl || (e.aiResult?.observationType && e.aiResult.observationType !== "care_note")) return "observe";
+    return "note";
+  };
+  const KIND: Record<string, [string, string]> = {
+    meal: ["饮食", "Meals"], bath: ["洗浴", "Bath"], toilet: ["如厕", "Toilet"], glucose: ["血糖", "Blood glucose"],
+    observe: ["拍照观察", "Observation"], note: ["护理记录", "Care note"],
+  };
+  const kLabel = (k: string) => (zh ? KIND[k][0] : KIND[k][1]);
+  const isToday = (ts: any) => new Date(ts).toDateString() === new Date().toDateString();
+  const todayEvents = timelineEvents.filter((e: any) => isToday(e.timestamp));
+  const mealEvents = timelineEvents.filter((e: any) => kindOf(e) === "meal");
+  const histEvents = timelineEvents.filter((e: any) => histFilter === "all" || kindOf(e) === histFilter);
+  const byDay: [string, any[]][] = [];
+  histEvents.forEach((e: any) => {
+    const d = new Date(e.timestamp);
+    const key = isToday(e.timestamp) ? (zh ? "今天" : "Today") : d.toLocaleDateString(zh ? "zh-CN" : "en-AU", { month: "long", day: "numeric", weekday: "short" });
+    const last = byDay[byDay.length - 1];
+    if (last && last[0] === key) last[1].push(e); else byDay.push([key, [e]]);
+  });
+  const TABS: [string, string, string][] = [
+    ["today", "今天", "Today"], ["meals", "饮食", "Meals"], ["history", "历史记录", "History"], ["health", "健康档案", "Health"],
+    ["observe", "拍照观察", "Photo check"], ["note", "写护理记录", "Write a note"], ["family", "家属更新", "Family update"], ["handover", "交班汇总", "Shift summary"],
+  ];
+  const Events = ({ list }: { list: any[] }) => (
+    <ol className="m-0 p-0 list-none">
+      {list.map((event: any, idx: number) => (
+        <li key={idx} className="flex gap-4">
+          <span className="w-11 shrink-0 text-[13px] text-slate-500 tabular-nums pt-px">{hhmm(event.timestamp)}</span>
+          <span className="flex flex-col items-center w-2.5 shrink-0" aria-hidden="true">
+            <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-amber-400" />
+            {idx < list.length - 1 && <span className="flex-1 w-px bg-slate-200 mt-1" />}
+          </span>
+          <span className="flex-1 min-w-0 pb-5">
+            <span className="text-[13px] text-slate-500">{kLabel(kindOf(event))}</span>
+            <p className="m-0 text-[15px] leading-6 text-slate-800">{evText(event)}</p>
+            {event.photoUrl && <img src={event.photoUrl} alt="" className="mt-2 rounded-xl max-h-40 object-cover" />}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+
   return (
-    <div className="max-w-5xl mx-auto font-light">
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-3 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all mb-8 px-5 py-2.5 rounded-xl font-medium shadow-sm active:scale-95"
-      >
-        <ArrowLeft className="w-5 h-5" />
+    <div className="max-w-5xl mx-auto">
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-4">
+        <ArrowLeft className="w-4 h-4" />
         {t('back_to_dashboard')}
       </button>
 
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8">
-        <div className="bg-slate-50 px-6 py-8 sm:px-10 flex flex-col sm:flex-row items-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center text-3xl font-bold border border-teal-100">
+      <div className="flex flex-col sm:flex-row sm:items-end gap-6 pb-8 border-b border-slate-200 mb-10">
+        <div className="flex items-center gap-5 flex-1 min-w-0">
+          <div className="w-20 h-20 shrink-0 rounded-full bg-indigo-50 text-slate-900 flex items-center justify-center text-2xl font-heading font-semibold">
             {getInitials(resident.name)}
           </div>
-          <div className="text-center sm:text-left">
-            <h1 className="text-3xl font-normal text-slate-800 tracking-tight">
-              {resident.name}
-            </h1>
-            <p className="text-lg text-slate-500 font-light mt-1">
-              {resident.room}
-            </p>
-          </div>
-          <div className="ml-auto flex gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200 text-center min-w-[100px]">
-              <div className="text-3xl font-light text-slate-700">
-                {resident.careMinutesToday}
-              </div>
-              <div className="text-xs font-normal text-slate-400 uppercase tracking-widest mt-1">
-                {t('mins')}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 flex items-center justify-center min-w-[100px]">
-              <div
-                className={`w-8 h-8 rounded-full ${
-                  resident.statusColor === "green"
-                    ? "bg-teal-400"
-                    : resident.statusColor === "yellow"
-                      ? "bg-amber-400"
-                      : "bg-red-500"
-                }`}
-              ></div>
-            </div>
+          <div className="min-w-0">
+            <span className="text-[13px] text-slate-500">{resident.room}</span>
+            <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900 truncate">{resident.name}</h1>
+            <span className="mt-1 inline-flex items-center gap-2 text-[15px] text-slate-600">
+              <span className={`w-2 h-2 rounded-full ${statusDot}`} aria-hidden="true" />{statusLabel}
+            </span>
           </div>
         </div>
+        <div className="flex flex-col items-start sm:items-end">
+          <span className="text-[13px] text-slate-500">{t('care_minutes')}</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-[56px] leading-none font-light tracking-[-0.04em] text-slate-900 tabular-nums">{resident.careMinutesToday}</span>
+            <span className="text-[15px] text-slate-500 tabular-nums">/ {resident.careMinutesTarget} {lang === "zh" ? "分钟" : "min"}</span>
+          </span>
+        </div>
       </div>
+
+      {/* Tabs */}
+      <div role="tablist" aria-label={zh ? "老人资料分页" : "Resident sections"} className="flex gap-x-6 gap-y-1 overflow-x-auto -mt-6 mb-10 border-b border-slate-200">
+        {TABS.map(([k, z, e]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`shrink-0 py-3 text-[15px] border-b-2 -mb-px transition-colors ${tab === k ? "border-amber-400 text-slate-900 font-semibold" : "border-transparent text-slate-500 hover:text-slate-900"}`}>
+            {zh ? z : e}
+          </button>
+        ))}
+      </div>
+
+      {tab === "today" && (<>
       {/* Care Tasks & Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="text-xl font-medium tracking-tight text-slate-800 mb-4">{t("quick_log") || "Quick Log"}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-12 mb-12">
+        <div className="flex flex-col">
+          <h2 className="text-[26px] font-semibold text-slate-900">{t("quick_log") || "Quick Log"}</h2>
+          <p className="text-[14px] text-slate-500 mt-1 mb-4">{lang === "zh" ? "点一下就记下，时间自动记上。" : "One tap logs it with the time."}</p>
+          <div className="grid grid-cols-2 gap-3">
             {["bath", "meal", "toilet", "blood_glucose"].map((task) => (
               <button
                 key={task}
                 onClick={() => onQuickLog && onQuickLog(task)}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors gap-2 group"
+                className="min-h-14 px-5 rounded-full border border-slate-300 bg-white text-[16px] text-slate-900 hover:border-amber-400 hover:bg-amber-50 transition-colors"
               >
-                <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-700 uppercase tracking-wider">
-                  {t(task as any) || task.replace("_", " ")}
-                </span>
+                {t(task as any) || task.replace("_", " ")}
               </button>
             ))}
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 overflow-hidden flex flex-col max-h-[400px]">
-          <h2 className="text-xl font-medium tracking-tight text-slate-800 mb-4">{t("timeline") || "Timeline"}</h2>
-          <div className="overflow-y-auto pr-2 flex-1 space-y-4">
-            {timelineEvents.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">{t("no_recent_activity") || "No recent activity."}</p>
-            ) : (
-              timelineEvents.map((event: any, idx: number) => (
-                <div key={idx} className="flex gap-4">
-                  <div className="w-10 h-10 shrink-0 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs border border-indigo-100">
-                    {new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex-1">
-                    <p className="text-sm text-slate-700">{event.aiResult?.observation || event.observation || "Care task logged"}</p>
-                    {event.photoUrl && <img src={event.photoUrl} alt="Log attachment" className="mt-2 rounded-lg max-h-32 object-cover border border-slate-200" />}
-                  </div>
-                </div>
-              ))
-            )}
+        <div className="flex flex-col min-h-0">
+          <h2 className="text-[26px] font-semibold text-slate-900 mb-4">{zh ? "今天的时间线" : "Today"}</h2>
+          <div className="overflow-y-auto max-h-[420px] pr-2 border-t border-slate-200 pt-4">
+            {todayEvents.length === 0 ? (
+              <p className="text-slate-500 text-[15px] m-0">
+                {zh ? "今天还没有记录。" : "Nothing logged today."}
+                {timelineEvents.length > 0 && <button onClick={() => setTab("history")} className="ml-2 underline text-slate-900">{zh ? "看历史记录" : "See history"}</button>}
+              </p>
+            ) : <Events list={todayEvents} />}
           </div>
         </div>
       </div>
 
+      </>)}
+
+      {tab === "meals" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-12 mb-12">
+          <div className="flex flex-col">
+            <h2 className="text-[26px] font-semibold text-slate-900">{zh ? "饮食" : "Meals"}</h2>
+            <div className="mt-4 border-y border-slate-200 divide-y divide-slate-200">
+              <div className="py-4 flex justify-between gap-4 text-[15px]">
+                <span className="text-slate-500">{zh ? "这一餐" : "Latest meal"}</span>
+                <span className="text-slate-900">{t(resident.mealStatus as any) || resident.mealStatus}</span>
+              </div>
+              <div className="py-4 flex flex-col gap-1.5 text-[15px]">
+                <span className="text-slate-500">{zh ? "过敏和忌口" : "Allergies"}</span>
+                {resident.allergies && resident.allergies.length > 0
+                  ? resident.allergies.map((a, i) => <span key={i} className={a.toLowerCase().includes("no known") ? "text-slate-900" : "text-red-600 font-medium"}>{a}</span>)
+                  : <span className="text-slate-900">{t('no_recorded_allergies')}</span>}
+              </div>
+            </div>
+            <button onClick={() => onQuickLog && onQuickLog("meal")}
+              className="mt-6 self-start min-h-12 px-7 rounded-full bg-slate-900 text-white text-[16px] font-semibold hover:bg-slate-700 transition-colors">
+              {zh ? "记一次进餐" : "Log a meal"}
+            </button>
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-[26px] font-semibold text-slate-900 mb-4">{zh ? "进餐记录" : "Meal history"}</h2>
+            <div className="border-t border-slate-200 pt-4">
+              {mealEvents.length === 0 ? <p className="m-0 text-[15px] text-slate-500">{zh ? "还没有进餐记录。" : "No meal records yet."}</p> : <Events list={mealEvents} />}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "history" && (
+        <div className="mb-12">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="text-[26px] font-semibold text-slate-900 flex-1">{zh ? "历史记录" : "History"}</h2>
+            <span className="text-[13px] text-slate-500">{zh ? `共 ${histEvents.length} 条` : `${histEvents.length} records`}</span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {["all", "meal", "bath", "toilet", "glucose", "observe", "note"].map((k) => (
+              <button key={k} onClick={() => setHistFilter(k)} aria-pressed={histFilter === k}
+                className={`min-h-9 px-4 rounded-full text-[14px] border transition-colors ${histFilter === k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-500"}`}>
+                {k === "all" ? (zh ? "全部" : "All") : kLabel(k)}
+              </button>
+            ))}
+          </div>
+          {byDay.length === 0 ? <p className="mt-6 py-4 border-y border-slate-200 text-[15px] text-slate-500">{zh ? "没有符合的记录。" : "No matching records."}</p> : byDay.map(([day, list]) => (
+            <div key={day} className="mt-8">
+              <div className="text-[13px] text-slate-500 pb-3 border-b border-slate-200 mb-4">{day}<span className="ml-2">{zh ? `${list.length} 条` : `${list.length}`}</span></div>
+              <Events list={list} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "health" && (<>
       {/* Medical History Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8 p-6 sm:p-8">
-        <h2 className="text-xl font-medium tracking-tight text-slate-800 mb-4">{t('medical_profile')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Activity className="w-4 h-4" /> {t('past_medical_history')}
-            </h3>
+      <div className="mb-12">
+        <h2 className="text-[26px] font-semibold text-slate-900 mb-4">{t('medical_profile')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 border-y border-slate-200">
+          <div className="py-5 md:pr-6">
+            <h3 className="text-[13px] text-slate-500 mb-2 flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> {t('past_medical_history')}</h3>
             {resident.medicalHistory && resident.medicalHistory.length > 0 ? (
-              <ul className="list-disc pl-5 space-y-1">
-                {resident.medicalHistory.map((item, i) => (
-                  <li key={i} className="text-sm text-slate-700">{item}</li>
+              <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
+                {resident.medicalHistory.map((item, i) => <li key={i} className="text-[15px] text-slate-900">{item}</li>)}
+              </ul>
+            ) : <p className="text-slate-500 text-[15px] m-0">{t('none_recorded')}</p>}
+          </div>
+          <div className="py-5 md:px-6 border-t md:border-t-0 md:border-l border-slate-200">
+            <h3 className="text-[13px] text-slate-500 mb-2 flex items-center gap-2"><FileText className="w-3.5 h-3.5" /> {t('current_medications')}</h3>
+            {resident.medications && resident.medications.length > 0 ? (
+              <ul className="m-0 p-0 list-none flex flex-col gap-2.5">
+                {resident.medications.map((med, i) => (
+                  <li key={i} className="text-[15px]">
+                    <div className="text-slate-900">{med.name}</div>
+                    <div className="text-[13px] text-slate-500">{med.dosage} · {med.frequency}</div>
+                  </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-slate-600 text-sm italic">{t('none_recorded')}</p>
-            )}
+            ) : <p className="text-slate-500 text-[15px] m-0">{t('none_recorded')}</p>}
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4" /> {t('current_medications')}
-            </h3>
-            {resident.medications && resident.medications.length > 0 ? (
-              <div className="space-y-2">
-                {resident.medications.map((med, i) => (
-                  <div key={i} className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-sm">
-                    <div className="font-semibold text-slate-800">{med.name}</div>
-                    <div className="text-slate-500 font-light mt-0.5">{med.dosage} • {med.frequency}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-600 text-sm italic">{t('none_recorded')}</p>
-            )}
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" /> {t('allergies')}
-            </h3>
+          <div className="py-5 md:pl-6 border-t md:border-t-0 md:border-l border-slate-200">
+            <h3 className="text-[13px] text-slate-500 mb-2 flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5" /> {t('allergies')}</h3>
             {resident.allergies && resident.allergies.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {resident.allergies.map((allergy, i) => (
-                  <span key={i} className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    allergy.toLowerCase().includes('no known') 
-                      ? 'bg-slate-100 text-slate-700' 
-                      : 'bg-red-100 text-red-700 border border-red-200'
-                  }`}>
-                    {allergy}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-600 text-sm italic">{t('no_recorded_allergies')}</p>
-            )}
+              <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
+                {resident.allergies.map((allergy, i) => {
+                  const none = allergy.toLowerCase().includes('no known');
+                  return <li key={i} className={`text-[15px] flex items-center gap-2 ${none ? "text-slate-900" : "text-red-600 font-medium"}`}>{!none && <span className="w-2 h-2 rounded-full bg-red-500" aria-hidden="true" />}{allergy}</li>;
+                })}
+              </ul>
+            ) : <p className="text-slate-500 text-[15px] m-0">{t('no_recorded_allergies')}</p>}
           </div>
         </div>
       </div>
 
+      </>)}
+
+      {tab === "handover" && (<>
       {/* Daily Summary */}
       {!isCaregiver && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-medium tracking-tight text-slate-800 flex items-center gap-2">
+            <h2 className="text-[26px] font-semibold text-slate-900 flex items-center gap-2">
               {t('todays_summary')}
             </h2>
             <button
               onClick={handleGenerateSummary}
               disabled={isGeneratingSummary}
-              className="bg-slate-800 hover:bg-slate-900 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
+              className="bg-slate-800 hover:bg-slate-900 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-full transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
             >
               {isGeneratingSummary ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -896,7 +977,7 @@ export function ResidentProfile({
           )}
 
           {isGeneratingSummary ? (
-          <div className="border border-slate-200 rounded-2xl bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
+          <div className="border border-slate-200 rounded-full bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
             {scrubbingStatus ? (
               <div className="relative z-10 w-full max-w-md mx-auto text-left flex flex-col items-center">
@@ -943,11 +1024,14 @@ export function ResidentProfile({
         </div>
       )}
 
+      </>)}
+
+      {tab === "family" && (<>
       {/* Family Portal Section */}
       <div className="mb-8 border-t border-slate-200 pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-xl font-medium tracking-tight text-slate-800 flex items-center gap-2">
+            <h2 className="text-[26px] font-semibold text-slate-900 flex items-center gap-2">
               {t('family_update_desensitized')}
             </h2>
             <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 w-fit">
@@ -958,7 +1042,7 @@ export function ResidentProfile({
           <button
             onClick={handleGenerateFamilyUpdate}
             disabled={isGeneratingFamilyUpdate}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-full transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
           >
             {isGeneratingFamilyUpdate ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -968,7 +1052,7 @@ export function ResidentProfile({
         </div>
         
         {isGeneratingFamilyUpdate ? (
-          <div className="border border-slate-200 rounded-2xl bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
+          <div className="border border-slate-200 rounded-full bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
             {scrubbingStatus ? (
               <div className="relative z-10 w-full max-w-md mx-auto text-left flex flex-col items-center">
@@ -1036,6 +1120,9 @@ export function ResidentProfile({
         )}
       </div>
 
+      </>)}
+
+      {tab === "observe" && (<>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Col: Diagram & Upload Action */}
         <div className="space-y-6">
@@ -1054,7 +1141,7 @@ export function ResidentProfile({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <h2 className="text-xl font-normal text-slate-800 mb-2">
+            <h2 className="text-[26px] font-semibold text-slate-900 mb-2">
               {t('record_observation')}
             </h2>
             <p className="text-slate-500 mb-8 text-sm font-light">
@@ -1328,9 +1415,12 @@ export function ResidentProfile({
         </div>
       </div>
 
+      </>)}
+
+      {tab === "note" && (<>
       {/* Daily Care Note Generator Section */}
       <div className="mt-8 border-t border-slate-200 pt-8">
-        <h2 className="text-xl font-medium tracking-tight text-slate-800 mb-6 flex items-center gap-2">
+        <h2 className="text-[26px] font-semibold text-slate-900 mb-6 flex items-center gap-2">
           {t('daily_care_note_generator')}
         </h2>
 
@@ -1389,7 +1479,7 @@ export function ResidentProfile({
             <button
               onClick={handleGenerateCareNote}
               disabled={isGeneratingCareNote || !careNoteInput.trim() || isRecording}
-              className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-xl text-sm font-bold transition-all hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-full text-sm font-bold transition-all hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isGeneratingCareNote ? (
                 <>
@@ -1403,7 +1493,7 @@ export function ResidentProfile({
 
           <div>
             {isGeneratingCareNote ? (
-              <div className="h-full border border-slate-200 rounded-2xl bg-slate-900 p-10 flex flex-col items-center justify-center text-center mt-0 min-h-[200px] overflow-hidden relative">
+              <div className="h-full border border-slate-200 rounded-full bg-slate-900 p-10 flex flex-col items-center justify-center text-center mt-0 min-h-[200px] overflow-hidden relative">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                 {scrubbingStatus ? (
                   <div className="relative z-10 w-full max-w-md mx-auto text-left flex flex-col items-center">
@@ -1687,11 +1777,14 @@ export function ResidentProfile({
         </div>
       </div>
 
+      </>)}
+
+      {tab === "handover" && (<>
       {/* End-of-Shift Summary */}
       <div className="mt-8 border-t border-slate-200 pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-xl font-medium tracking-tight text-slate-800 flex items-center gap-2">
+            <h2 className="text-[26px] font-semibold text-slate-900 flex items-center gap-2">
               {t('end_of_shift_summary')}
             </h2>
             <div className="flex items-center gap-1 mt-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2.5 py-1 w-fit">
@@ -1702,7 +1795,7 @@ export function ResidentProfile({
           <button
             onClick={handleGenerateShiftSummary}
             disabled={isGeneratingShiftSummary}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-medium py-3 px-4 sm:px-6 rounded-full transition-colors flex items-center gap-2 disabled:opacity-50 shrink-0 shadow-sm hover:shadow-md"
           >
             {isGeneratingShiftSummary ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -1718,7 +1811,7 @@ export function ResidentProfile({
         )}
 
         {isGeneratingShiftSummary ? (
-          <div className="border border-slate-200 rounded-2xl bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
+          <div className="border border-slate-200 rounded-full bg-slate-900 p-8 flex flex-col items-center justify-center text-center overflow-hidden relative">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
             {scrubbingStatus ? (
               <div className="relative z-10 w-full max-w-md mx-auto text-left flex flex-col items-center">
@@ -1830,6 +1923,7 @@ export function ResidentProfile({
           </div>
         ) : null}
       </div>
+      </>)}
 
     </div>
   );
