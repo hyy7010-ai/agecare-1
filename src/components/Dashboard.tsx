@@ -169,7 +169,7 @@ export function Dashboard({
               {pendingReviews.map((review) => (
                 <li
                   key={review.id}
-                  className="py-4 border-t border-slate-200 flex flex-col md:flex-row gap-3 justify-between md:items-center cursor-pointer hover:bg-slate-100/60 transition-colors px-2 -mx-2 rounded-lg"
+                  className="py-4 border-t border-slate-200 flex flex-col md:flex-row gap-3 justify-between md:items-center cursor-pointer hover:bg-slate-100/60 transition-colors px-2 -mx-2"
                   onClick={() => setSelectedReview(review)}
                 >
                   <div className="min-w-0">

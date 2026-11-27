@@ -89,10 +89,10 @@ export function RNReviewList({
           ) : (
             <ul className="m-0 p-0 list-none border-b border-slate-200">
               {pendingReviews.map((review) => (
-                <li key={review.id}>
+                <li key={review.id} className="border-t border-slate-200">
                   <button
                     onClick={() => { setSelectedReviewId(review.id); setRnLiabilityChecked(false); }}
-                    className="group w-full text-left py-5 border-t border-slate-200 flex items-center gap-5 hover:bg-slate-100/60 transition-colors px-3 -mx-3 rounded-xl"
+                    className="group w-full text-left py-5 flex items-center gap-5 hover:bg-slate-100/60 transition-colors px-3 -mx-3 rounded-xl"
                   >
                     {review.photoUrl ? (
                       <img src={review.photoUrl} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />

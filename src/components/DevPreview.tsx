@@ -9,6 +9,9 @@ import { AdminDashboard } from "./AdminDashboard";
 import { SirsReviewDashboard } from "./SirsReviewDashboard";
 import { FamilyDashboard } from "./FamilyDashboard";
 import { RosterComplianceGuard } from "./RosterComplianceGuard";
+import { StaffManager } from "./StaffManager";
+import { PlatformHub } from "./PlatformHub";
+import { SirsReporter } from "./SirsReporter";
 
 // fictional records for the preview only
 const at = (daysAgo: number, h: number, m: number) => { const d = new Date(); d.setDate(d.getDate() - daysAgo); d.setHours(h, m, 0, 0); return d.toISOString(); };
@@ -62,6 +65,9 @@ export function DevPreview() {
         {screen === "sirs" && <SirsReviewDashboard onBack={noop} />}
         {screen === "family" && <FamilyDashboard resident={mockResidents[0]} />}
         {screen === "roster" && <RosterComplianceGuard onBack={noop} />}
+        {screen === "staff" && <StaffManager onBack={noop} />}
+        {screen === "platform" && <PlatformHub onBack={noop} />}
+        {screen === "sirsform" && <SirsReporter onCancel={noop} onSubmit={noop} residentName="Eleanor Vance" />}
       </main>
     </div>
   );

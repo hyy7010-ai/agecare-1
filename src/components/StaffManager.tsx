@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Download, ShieldCheck, Mail, Phone, Users, ShieldAlert, Award } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { db } from "../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -10,6 +11,8 @@ interface StaffManagerProps {
 export function StaffManager({ onBack }: StaffManagerProps) {
   const [showToast, setShowToast] = useState(false);
   const [dbStaff, setDbStaff] = useState<any[]>([]);
+  const { lang } = useLanguage();
+  const T = (a: string, b: string) => (lang === "zh" ? a : b);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -32,118 +35,68 @@ export function StaffManager({ onBack }: StaffManagerProps) {
     }, 3000);
   };
 
+  const stats = [
+    { label: T("护理时长", "Care minutes"), value: "98%", note: T("本周达标", "Target met this week"), tone: "text-emerald-700" },
+    { label: T("注册护士 24/7 覆盖", "RN 24/7 coverage"), value: "100%", note: T("排班没有空档", "No gaps in the roster"), tone: "text-slate-500" },
+    { label: T("SIRS 事故", "SIRS incidents"), value: "2", note: T("等 ACQSC 审核", "Pending ACQSC review"), tone: "text-amber-700" },
+  ];
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <button
-        onClick={onBack}
-        className="flex items-center text-slate-500 hover:text-slate-800 transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5 mr-2" />
-        Back to Dashboard
+    <div>
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+        <ArrowLeft className="w-4 h-4" />{T("返回看板", "Back to dashboard")}
       </button>
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-normal text-slate-800 tracking-tight">
-            Staff & Compliance
-          </h2>
-          <p className="text-slate-500 font-light mt-1">
-            Manage your team and generate compliance reports
-          </p>
+      <div className="flex flex-wrap items-end gap-4 mb-8">
+        <div className="flex-1">
+          <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">{T("员工和合规", "Staff and compliance")}</h1>
+          <p className="text-base text-slate-500 mt-2">{T("管理团队，生成合规报告。", "Manage the team and generate compliance reports.")}</p>
         </div>
-
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-normal text-sm rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          <Download className="w-4 h-4" />
-          Export Compliance PDF
+        <button onClick={handleExport} className="inline-flex items-center gap-2 min-h-12 px-6 rounded-full border border-slate-300 bg-white text-slate-900 text-[15px] hover:border-slate-500 transition-colors">
+          <Download className="w-4 h-4" />{T("导出合规报告 PDF", "Export compliance PDF")}
         </button>
       </div>
 
       {showToast && (
-        <div className="fixed top-20 right-8 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 z-50">
-          <ShieldCheck className="w-5 h-5 text-teal-400" />
-          <div>
-            <p className="font-medium text-sm">Report Generated</p>
-            <p className="text-xs text-slate-300">File exported to /downloads successfully.</p>
-          </div>
+        <div role="status" className="mb-6 rounded-2xl bg-slate-100 px-5 py-3.5 text-[15px] text-slate-700">
+          {T("示范功能：报告导出还没有接上，没有生成文件。", "Demo: report export is not connected yet, so no file was created.")}
         </div>
       )}
 
-      {/* Compliance Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">Care Minutes</h3>
-            <Users className="w-5 h-5 text-teal-500" />
+      <div className="grid grid-cols-1 md:grid-cols-3 border-y border-slate-200">
+        {stats.map((k, i) => (
+          <div key={k.label} className={`py-6 ${i > 0 ? "md:pl-8 md:border-l border-t md:border-t-0 border-slate-200" : ""} ${i < 2 ? "md:pr-8" : ""}`}>
+            <span className="text-[13px] text-slate-500">{k.label}</span>
+            <div className="mt-2 text-[48px] leading-none font-light tracking-[-0.04em] text-slate-900 tabular-nums">{k.value}</div>
+            <span className={`mt-3 block text-[13px] ${k.tone}`}>{k.note}</span>
           </div>
-          <div className="text-3xl font-bold text-slate-800">98%</div>
-          <p className="text-xs text-teal-600 font-medium mt-2 flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3" /> Target met for this week
-          </p>
-        </div>
-        
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">RN 24/7 Coverage</h3>
-            <Award className="w-5 h-5 text-indigo-500" />
-          </div>
-          <div className="text-3xl font-bold text-slate-800">100%</div>
-          <p className="text-xs text-slate-500 font-medium mt-2">
-            No gaps detected in schedule
-          </p>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500">SIRS Incidents</h3>
-            <ShieldAlert className="w-5 h-5 text-amber-500" />
-          </div>
-          <div className="text-3xl font-bold text-slate-800">2</div>
-          <p className="text-xs text-amber-600 font-medium mt-2">
-            Pending ACQSC review
-          </p>
-        </div>
+        ))}
       </div>
+      <span className="mt-2 block text-[12px] text-slate-400 mb-12">{T("示范数据", "Demo data")}</span>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-medium text-slate-800">Team Members</h3>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {dbStaff.length > 0 ? dbStaff.map((staff) => {
-            const staffName = staff.name || staff.email || "Unknown Staff";
+      <h2 className="text-[26px] font-semibold text-slate-900 mb-4">{T("团队成员", "Team members")}</h2>
+      {dbStaff.length === 0 ? (
+        <p className="m-0 py-6 border-y border-slate-200 text-[15px] text-slate-500">{T("没有找到员工。", "No staff members found.")}</p>
+      ) : (
+        <ul className="m-0 p-0 list-none border-b border-slate-200">
+          {dbStaff.map((staff) => {
+            const staffName = staff.name || staff.displayName || staff.email || "Unknown Staff";
             const init = staffName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
+            const on = staff.status === "Active" || staff.status === "On Duty" || !staff.status;
             return (
-            <div key={staff.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
-                  {init}
-                </div>
-                <div>
-                  <h4 className="font-medium text-slate-900">{staffName}</h4>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                    <span className="flex items-center gap-1"><Award className="w-3 h-3" /> {staff.role || 'caregiver'}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                  ${staff.status === "Active" || staff.status === "On Duty" || !staff.status
-                    ? "bg-teal-50 text-teal-700 border border-teal-200" 
-                    : "bg-slate-100 text-slate-600 border border-slate-200"}`}>
-                  {staff.status || "Active"}
+              <li key={staff.id} className="py-4 border-t border-slate-200 flex items-center gap-4">
+                <span className="w-11 h-11 shrink-0 rounded-full bg-indigo-50 text-slate-900 flex items-center justify-center font-heading font-semibold">{init}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[16px] font-semibold text-slate-900 truncate">{staffName}</span>
+                  <span className="block text-[13px] text-slate-500 capitalize">{staff.role || "caregiver"}</span>
                 </span>
-              </div>
-            </div>
-          )}) : (
-            <div className="p-8 text-center text-slate-500 font-medium">
-              No staff members found
-            </div>
-          )}
-        </div>
-      </div>
+                <span className={`flex items-center gap-2 text-[14px] ${on ? "text-emerald-700" : "text-slate-500"}`}>
+                  <span className={`w-2 h-2 rounded-full ${on ? "bg-emerald-500" : "bg-slate-300"}`} aria-hidden="true" />{staff.status || "Active"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

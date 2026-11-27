@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-import { ArrowLeft, BarChart3, ShieldCheck, Zap, CreditCard, Download, Activity, Globe, LayoutDashboard } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PlatformAnalytics, PlatformAuditLogs, PlatformIntegrations, PlatformBilling, PlatformSuperAdmin } from "./PlatformFeatures";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export function PlatformHub({ onBack }: { onBack: () => void }) {
   const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [exportNote, setExportNote] = useState(false);
+  const { lang } = useLanguage();
+  const T = (a: string, b: string) => (lang === "zh" ? a : b);
 
   if (activeModule === "analytics") return <PlatformAnalytics onBack={() => setActiveModule(null)} />;
   if (activeModule === "audit") return <PlatformAuditLogs onBack={() => setActiveModule(null)} />;
@@ -12,39 +16,40 @@ export function PlatformHub({ onBack }: { onBack: () => void }) {
   if (activeModule === "superadmin") return <PlatformSuperAdmin onBack={() => setActiveModule(null)} />;
 
   const modules = [
-    { id: "superadmin", title: "Super Admin (Multi-tenant)", icon: <Globe className="w-8 h-8 text-indigo-500" />, desc: "Manage multiple facilities and global RBAC." },
-    { id: "analytics", title: "Advanced Analytics", icon: <BarChart3 className="w-8 h-8 text-teal-500" />, desc: "Cross-facility insights, compliance charts." },
-    { id: "audit", title: "Audit & Compliance Logs", icon: <ShieldCheck className="w-8 h-8 text-rose-500" />, desc: "Immutable system activity logs for legal compliance." },
-    { id: "integrations", title: "API & Integrations", icon: <Zap className="w-8 h-8 text-amber-500" />, desc: "Connect wearables, EHRs, and webhooks." },
-    { id: "billing", title: "Billing & Subscription", icon: <CreditCard className="w-8 h-8 text-blue-500" />, desc: "Manage SaaS tiers, usage limits, and invoices." },
-    { id: "export", title: "Data Export & Import", icon: <Download className="w-8 h-8 text-emerald-500" />, desc: "Bulk import residents, export compliance PDFs." },
+    { id: "superadmin", title: T("多院舍超级管理员", "Super admin (multi-tenant)"), desc: T("管理多家院舍和全局权限。", "Manage multiple facilities and global roles.") },
+    { id: "analytics", title: T("进阶数据分析", "Advanced analytics"), desc: T("跨院舍的洞察和合规图表。", "Cross-facility insights and compliance charts.") },
+    { id: "audit", title: T("审计和合规日志", "Audit and compliance logs"), desc: T("不可更改的系统操作记录，用于法律合规。", "Immutable activity logs for legal compliance.") },
+    { id: "integrations", title: T("API 和外部连接", "API and integrations"), desc: T("连接穿戴设备、电子病历和 webhook。", "Connect wearables, EHRs and webhooks.") },
+    { id: "billing", title: T("计费和订阅", "Billing and subscription"), desc: T("管理套餐、用量上限和发票。", "Manage tiers, usage limits and invoices.") },
+    { id: "export", title: T("数据导入导出", "Data import and export"), desc: T("批量导入长者资料，导出合规报告。", "Bulk import residents, export compliance PDFs.") },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center gap-4">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ArrowLeft className="w-5 h-5 text-slate-600" /></button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3"><LayoutDashboard className="w-8 h-8 text-indigo-600" /> Platform Hub</h1>
-          <p className="text-slate-500 mt-1">Manage the core infrastructure of the SaaS platform.</p>
+    <div>
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+        <ArrowLeft className="w-4 h-4" />{T("返回看板", "Back to dashboard")}
+      </button>
+      <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">Platform Hub</h1>
+      <p className="text-base text-slate-500 mt-2 mb-8">{T("管理整个平台的基础设施。", "Manage the core infrastructure of the platform.")}</p>
+      {exportNote && (
+        <div role="status" className="mb-6 rounded-2xl bg-slate-100 px-5 py-3.5 text-[15px] text-slate-700">
+          {T("示范功能：导入导出还没有接上，没有下载文件。", "Demo: import and export are not connected yet, so nothing was downloaded.")}
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {modules.map(mod => (
-          <button 
-            key={mod.id} 
-            onClick={() => mod.id !== "export" ? setActiveModule(mod.id) : alert("Export initiated (CSV downloaded).")}
-            className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left group"
-          >
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              {mod.icon}
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">{mod.title}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{mod.desc}</p>
-          </button>
+      )}
+      <ul className="m-0 p-0 list-none border-b border-slate-200">
+        {modules.map((mod) => (
+          <li key={mod.id} className="border-t border-slate-200">
+            <button
+              onClick={() => (mod.id !== "export" ? setActiveModule(mod.id) : setExportNote(true))}
+              className="group w-full text-left py-6 flex flex-wrap items-baseline gap-x-6 gap-y-1 hover:bg-slate-100/60 transition-colors px-3 -mx-3 rounded-xl"
+            >
+              <span className="basis-[260px] shrink-0 font-heading text-[24px] font-semibold text-slate-900">{mod.title}</span>
+              <span className="flex-1 basis-[260px] text-[15px] text-slate-600">{mod.desc}</span>
+              <span className="text-xl text-amber-600 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
