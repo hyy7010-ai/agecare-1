@@ -122,3 +122,30 @@ export function logAudit(action: string, detail: string) {
     localStorage.setItem(key, JSON.stringify([{ at: new Date().toLocaleString(), action, detail }, ...list].slice(0, 50)));
   } catch { /* storage off */ }
 }
+
+// ---------- quick logs: one photo + one sentence, stamped with the time ----------
+export type Moment = { id: string; at: string; ts: number; resident: string; by: string; text: string; photo?: string };
+const momentStore = makeStore<Moment[]>("sc_moments", (raw) => { try { return JSON.parse(raw || "[]"); } catch { return []; } });
+export const useMoments = () => useSyncExternalStore(momentStore.subscribe, momentStore.get, momentStore.get);
+export function addMoment(me: Identity, resident: string, text: string, photo?: string) {
+  const ts = Date.now();
+  // keep the newest 30 so small photos fit in browser storage
+  momentStore.set(JSON.stringify([...momentStore.get(), { id: `M${String(ts).slice(-6)}`, at: hhmm(), ts, resident, by: me.name, text, photo }].slice(-30)));
+}
+
+// Shrink a photo to a small JPEG data URL (about 640px wide) so it fits in browser storage.
+export function shrinkPhoto(file: File, max = 640): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}

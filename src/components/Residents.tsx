@@ -3,7 +3,8 @@
 // and notes a nurse has confirmed. Fictional residents only.
 import React, { useState } from "react";
 import { ScPage, Label, useEn } from "./ScShell";
-import { useIdentity, useCalls, RESIDENTS, targetLabel, Role } from "../lib/demoStore";
+import { useIdentity, useCalls, useMoments, RESIDENTS, targetLabel, Role } from "../lib/demoStore";
+import { QuickLog, Timeline, Ev } from "./Timeline";
 import { readShift } from "../lib/shiftLog";
 
 type P = { zh: string; en: string };
@@ -33,6 +34,7 @@ const CAN: Record<string, Role[]> = {
   confirmed: ["carer", "nurse", "manager", "family"],
   pending: ["carer", "nurse", "manager"],
   alerts: ["carer", "nurse", "manager"],
+  moments: ["carer", "nurse", "manager"],
 };
 
 const isConfirmed = (status?: string) => /确认|approved/i.test(status || "");
@@ -41,6 +43,7 @@ export function Residents() {
   const { en, t } = useEn();
   const me = useIdentity();
   const calls = useCalls();
+  const moments = useMoments();
   const entries = readShift();
   const list = me.role === "family" ? RESIDENTS.filter((r) => r.name === me.resident) : RESIDENTS;
   const fromUrl = new URLSearchParams(window.location.search).get("r") || "";
@@ -57,6 +60,31 @@ export function Residents() {
   const rCalls = calls.filter((c) => c.resident === cur.name);
   const p = PROFILE[cur.name];
   const tx = (x: P) => (en ? x.en : x.zh);
+
+  // Today's timeline, filtered by what this role may see.
+  const events: Ev[] = [];
+  for (const e of mine) {
+    if (rCalls.some((c) => c.id === e.id)) continue;
+    if (e.kind === "note") {
+      const ok = !e.pending && isConfirmed(e.status);
+      if (!ok && !can("pending")) continue;
+      events.push({ at: e.at, kind: ok ? t("护理记录 · 护士已确认", "Care note · confirmed") : t("护理记录 · 还没确认", "Care note · not confirmed"),
+        text: e.text, sub: e.status, lang: "en", red: !ok && /红线|必须|must/i.test(e.status || "") });
+    } else if (e.kind === "card") {
+      if (can("likes")) events.push({ at: e.at, kind: t("聊天卡", "Chat card"), text: e.text });
+    } else if (can("alerts")) {
+      events.push({ at: e.at, kind: t("提醒", "Alert"), text: e.text, sub: e.status, red: !!e.urgent });
+    }
+  }
+  if (can("alerts")) for (const c of rCalls) {
+    events.push({ at: c.at, kind: c.urgent ? t(`紧急呼叫 · ${c.from}`, `Urgent call · ${c.from}`) : t(`呼叫 · ${c.from}`, `Call · ${c.from}`),
+      text: `${c.to.map((k) => targetLabel(k, en)).join(en ? ", " : "、")}：${c.text}`, red: !!c.urgent });
+    for (const r of c.replies) events.push({ at: r.at, kind: t("回复", "Reply"), text: r.kind === "coming" ? t(`${r.by} 马上到`, `${r.by} is on the way`) : t(`${r.by} 已处理`, `${r.by} handled it`) });
+  }
+  if (can("moments")) for (const m of moments.filter((x) => x.resident === cur.name)) {
+    events.push({ at: m.at, kind: t(`记一笔 · ${m.by}`, `Quick log · ${m.by}`), text: m.text, photo: m.photo });
+  }
+  events.sort((a, b) => a.at.localeCompare(b.at));
 
   const Locked = ({ title, who }: { title: string; who: string }) => (
     <div className="mt-10 flex flex-col">
@@ -113,6 +141,18 @@ export function Residents() {
               <Rows items={p.watch.map(tx)} />
             </div>
 
+            <div className="mt-10 flex flex-col">
+              <Label>{t("今天的时间线", "Today's timeline")}</Label>
+              {can("moments") && <div className="mb-5"><QuickLog resident={cur.name} /></div>}
+              <Timeline events={events} />
+              {me.role === "family" && (
+                <span className="mt-1 text-[13px] text-sc-muted flex items-center gap-2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                  {t("只显示护士确认过的事。照片、聊天和员工呼叫只有员工能看。", "Only nurse-confirmed items are shown. Photos, chats and staff calls are staff only.")}
+                </span>
+              )}
+            </div>
+
             {can("likes") ? (
               <div className="mt-10 flex flex-col">
                 <Label>{t("喜欢什么、怎么聊", "Likes and how to talk with them")}</Label>
@@ -146,27 +186,6 @@ export function Residents() {
               </div>
             ) : <Locked title={t("还没确认的记录", "Notes not yet confirmed")} who={t("护士确认以后才会给家属看", "Shown to family only after a nurse confirms")} />}
 
-            {can("alerts") ? (
-              <div className="mt-10 flex flex-col">
-                <Label>{t("提醒和呼叫", "Alerts and calls")}</Label>
-                {alerts.length + rCalls.length === 0 ? <Empty>{t("这个班没有。", "None this shift.")}</Empty> :
-                  <Rows items={[
-                    ...rCalls.map((c) => (
-                      <span key={c.id} className="flex flex-col gap-0.5">
-                        <span className="text-[13px] text-sc-muted tabular-nums">{c.at}　{c.from} → {c.to.map((k) => targetLabel(k, en)).join(en ? ", " : "、")}{c.urgent && <span className="ml-2 text-sc-red-text font-medium">{t("紧急", "Urgent")}</span>}</span>
-                        <span>{c.text}</span>
-                        <span className="text-[13px] text-sc-muted">{c.closed ? t("已结束", "Closed") : c.replies.length ? c.replies.map((x) => `${x.by} ${x.kind === "coming" ? t("马上到", "on the way") : t("已处理", "handled")}`).join("、") : t("还没人回", "No reply yet")}</span>
-                      </span>
-                    )),
-                    ...alerts.filter((a) => !rCalls.some((c) => c.id === a.id)).map((a) => (
-                      <span key={a.id} className="flex flex-col gap-0.5">
-                        <span className={`text-[13px] tabular-nums ${a.urgent ? "text-sc-red-text" : "text-sc-muted"}`}>{a.at}　{a.status}</span>
-                        <span>{a.text}</span>
-                      </span>
-                    )),
-                  ]} />}
-              </div>
-            ) : <Locked title={t("提醒和呼叫", "Alerts and calls")} who={t("员工内部的呼叫，家属看不到", "Staff calls: not shown to family")} />}
 
             {me.role !== "family" && entries.length === 0 && (
               <p className="mt-8 text-[13px] text-sc-muted">{t("这个班还没有记录。去「交班单」点「载入示范班次」，这里就会有内容。", "No shift entries yet. Load the demo shift on the Handover page to fill this in.")} <a href="/handover" className="underline">{t("去交班单", "Go to Handover")}</a></p>
