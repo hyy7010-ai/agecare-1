@@ -179,19 +179,19 @@ export function AdminDashboard() {
                       <AreaChart data={careMinutesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#1F1B16" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#1F1B16" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7DFD1" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
                         <Tooltip 
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />
                         <Legend iconType="circle" />
-                        <Area type="monotone" dataKey="actual" name="Actual Mins" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorActual)" />
-                        <Area type="monotone" dataKey="required" name="Required (200)" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" fill="none" />
+                        <Area type="monotone" dataKey="actual" name="Actual Mins" stroke="#1F1B16" strokeWidth={3} fillOpacity={1} fill="url(#colorActual)" />
+                        <Area type="monotone" dataKey="required" name="Required (200)" stroke="#5F8746" strokeWidth={2} strokeDasharray="5 5" fill="none" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -205,17 +205,17 @@ export function AdminDashboard() {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={riskHeatmapData} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                        <YAxis dataKey="zone" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 500 }} />
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E7DFD1" />
+                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
+                        <YAxis dataKey="zone" type="category" axisLine={false} tickLine={false} tick={{ fill: '#5E5549', fontSize: 11, fontWeight: 500 }} />
                         <Tooltip
-                          cursor={{fill: '#f1f5f9'}}
+                          cursor={{fill: '#F3EDE2'}}
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />
                         <Bar dataKey="incidents" name="Incidents Recorded" radius={[0, 4, 4, 0]}>
                           {
                             riskHeatmapData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.risk === 'High' ? '#ef4444' : entry.risk === 'Medium' ? '#f59e0b' : '#10b981'} />
+                              <Cell key={`cell-${index}`} fill={entry.risk === 'High' ? '#D4382C' : entry.risk === 'Medium' ? '#F5B700' : '#5F8746'} />
                             ))
                           }
                         </Bar>

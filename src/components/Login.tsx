@@ -101,36 +101,26 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <a href="/demo" className="fixed top-3 right-3 z-50 text-sm px-3 py-1.5 rounded-full bg-orange-500 text-white shadow hover:bg-orange-600">比赛示范 Demo（不用登录 no login）→</a>
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-indigo-900 flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-indigo-800 to-teal-900 opacity-90 z-0"></div>
-
-        {/* Decorative Circles */}
-        <div className="absolute top-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
-        <div className="absolute top-48 -right-24 w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="p-2 bg-white/10 backdrop-blur rounded-xl">
-            <Activity className="h-8 w-8 text-teal-400" />
-          </div>
-          <span className="text-2xl font-bold text-white tracking-tight">
-            Sunrise Care
-          </span>
-        </div>
+      <a href="/demo" className="fixed top-3 right-3 z-50 text-sm px-4 py-2 rounded-full bg-slate-900 text-white hover:bg-slate-700">比赛示范 Demo（不用登录 no login）→</a>
+      {/* Left Panel - Branding (brand: warm ink, sunrise yellow logo, serif headline) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12 relative overflow-hidden">
+        <a href="/demo" className="relative z-10 flex items-center gap-3 text-white">
+          <img src="/sunrise-care-mark.svg" width={30} height={30} alt="" aria-hidden="true" />
+          <span className="text-2xl font-semibold tracking-tight">Sunrise Care</span>
+        </a>
 
         <div className="relative z-10 max-w-lg">
-          <h1 className="text-5xl font-bold text-white leading-tight mb-6">
+          <img src="/sunrise-care-logo.svg" alt="" aria-hidden="true" className="w-64 mb-10 -ml-3" />
+          <h1 className="text-5xl font-semibold text-white leading-tight mb-6">
             {t('system_title')}
           </h1>
-          <p className="text-indigo-200 text-lg leading-relaxed">
+          <p className="text-slate-300 text-lg leading-relaxed">
             {t('system_subtitle')}
           </p>
         </div>
 
-        <div className="relative z-10 text-indigo-300 text-sm">
-          &copy; {new Date().getFullYear()} Sunrise Care Systems. All rights
-          reserved.
+        <div className="relative z-10 text-slate-400 text-sm">
+          &copy; {new Date().getFullYear()} Sunrise Care. All rights reserved.
         </div>
       </div>
 

@@ -44,12 +44,12 @@ export function DemoHome() {
           {STEPS.map((s, i) => (
             <a key={s.href} href={s.href}
               className={`group flex flex-wrap items-baseline gap-x-6 gap-y-2 py-7 border-t border-sc-line text-sc-ink ${i === STEPS.length - 1 ? "border-b" : ""}`}>
-              <span className="basis-[200px] shrink-0 text-[22px] font-semibold">{en ? s.en : s.zh}</span>
+              <span className="basis-[200px] shrink-0 text-[26px] font-heading font-semibold">{en ? s.en : s.zh}</span>
               <span className="flex-1 basis-[320px] flex flex-col gap-1">
                 <span className="text-base leading-[26px] text-sc-ink-2">{en ? s.dEn : s.dZh}</span>
                 <span className="text-sm text-sc-muted">{en ? s.tEn : s.tZh}</span>
               </span>
-              <span className="text-xl transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+              <span className="text-xl text-sc-gold-deep transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
             </a>
           ))}
         </div>

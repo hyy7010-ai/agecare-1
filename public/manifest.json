@@ -1,20 +1,16 @@
 {
   "short_name": "Sunrise Care",
-  "name": "Sunrise Care · Aged Care Compliance",
+  "name": "Sunrise Care",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/sunrise-care-mark.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "512x512"
+      "sizes": "any",
+      "purpose": "any"
     }
   ],
-  "start_url": "/",
-  "background_color": "#ffffff",
+  "start_url": "/demo",
+  "background_color": "#FAF6EE",
   "display": "standalone",
-  "theme_color": "#059669"
+  "theme_color": "#FAF6EE"
 }

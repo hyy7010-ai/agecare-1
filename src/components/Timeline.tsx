@@ -77,7 +77,7 @@ export function Timeline({ events }: { events: Ev[] }) {
         <li key={i} className="flex gap-4">
           <span className="w-11 shrink-0 text-[13px] text-sc-muted tabular-nums pt-px">{ev.at}</span>
           <span className="flex flex-col items-center w-2.5 shrink-0" aria-hidden="true">
-            <span className={`mt-1.5 w-2.5 h-2.5 rounded-full ${ev.red ? "bg-sc-red" : "bg-sc-ink"}`} />
+            <span className={`mt-1.5 w-2.5 h-2.5 rounded-full ${ev.red ? "bg-sc-red" : "bg-sc-gold"}`} />
             {i < events.length - 1 && <span className="flex-1 w-px bg-sc-line mt-1" />}
           </span>
           <span className="flex-1 min-w-0 pb-6 flex flex-col gap-1">

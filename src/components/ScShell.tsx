@@ -70,7 +70,7 @@ export function ScPage({ current, children }: { current?: string; children: Reac
         <nav aria-label={t("主导航", "Main")} className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px]">
           {NAV[me.role].map((n) => (
             <a key={n.href} href={n.href} aria-current={current === n.href ? "page" : undefined}
-              className={`relative ${current === n.href ? "text-sc-ink font-semibold" : "text-sc-ink-2 hover:text-sc-ink"}`}>
+              className={`relative py-1 border-b-2 ${current === n.href ? "text-sc-ink font-semibold border-sc-gold" : "text-sc-ink-2 border-transparent hover:text-sc-ink"}`}>
               {en ? n.en : n.zh}
               {n.href === "/station" && badge > 0 && (
                 <span className="absolute -top-1.5 -right-4 min-w-[18px] h-[18px] px-1 rounded-full bg-sc-red text-white text-[11px] font-semibold flex items-center justify-center">{badge}</span>
@@ -138,6 +138,6 @@ export const Label = ({ children, className = "" }: { children: React.ReactNode;
 export const btnPrimary = "inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-full bg-sc-ink text-white text-base font-semibold cursor-pointer disabled:bg-black/10 disabled:text-sc-muted disabled:cursor-not-allowed";
 export const btnSecondary = "inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-full border border-black/15 bg-white text-sc-ink text-base cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
 export const tab = (on: boolean) =>
-  `py-1.5 min-h-9 text-[15px] cursor-pointer border-b-2 ${on ? "text-sc-ink font-semibold border-sc-ink" : "text-sc-muted border-transparent hover:text-sc-ink"}`;
+  `py-1.5 min-h-9 text-[15px] cursor-pointer border-b-2 ${on ? "text-sc-ink font-semibold border-sc-gold" : "text-sc-muted border-transparent hover:text-sc-ink"}`;
 export const chip = (on: boolean) =>
   `min-h-9 px-3.5 rounded-full text-[14px] cursor-pointer border ${on ? "bg-sc-ink text-white border-sc-ink" : "bg-white text-sc-ink border-black/15 hover:border-black/30"}`;

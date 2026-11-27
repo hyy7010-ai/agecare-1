@@ -618,8 +618,9 @@ export const DashboardContainer: React.FC = () => {
         <nav className="bg-white border-b border-pink-100 select-none sticky top-0 z-50 shadow-sm">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
-              <span className="font-normal text-pink-700 text-sm sm:text-lg tracking-tight">
-                Sunrise Family Portal
+              <img src="/sunrise-care-mark.svg" width={26} height={26} alt="" aria-hidden="true" />
+              <span className="font-heading font-semibold text-slate-900 text-base sm:text-xl">
+                Sunrise Care · Family
               </span>
             </div>
             <div className="flex items-center gap-4">
@@ -706,15 +707,13 @@ export const DashboardContainer: React.FC = () => {
         </div>
       )}
       {/* Top Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 select-none sticky top-0 z-50 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+      <nav className="bg-slate-50/90 backdrop-blur-md border-b border-slate-200 select-none sticky top-0 z-50">
         <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div
             className="flex items-center gap-3 cursor-pointer min-w-0 group"
             onClick={() => setCurrentScreen("dashboard")}
           >
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
-              <Activity className="w-6 h-6 text-white shrink-0" />
-            </div>
+            <img src="/sunrise-care-mark.svg" width={30} height={30} alt="" aria-hidden="true" className="shrink-0" />
             <span className="font-bold text-slate-800 text-xl tracking-tight truncate hidden sm:block font-heading">
               {t('app_title')}
             </span>
