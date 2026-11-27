@@ -52,320 +52,189 @@ export function RNReviewList({
 
   const handleRevertToAi = () => setEditedObservation(originalObservation);
 
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={selectedReviewId ? closeDetail : onBack}
-          className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </button>
-        <h1 className="text-2xl font-medium tracking-tight text-slate-800">
-          {t('rn_review_queue')}
-        </h1>
-      </div>
+  const zh = lang === "zh";
+  const hhmm = (ts: any) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const typeLabel = (k?: string) => {
+    if (!k) return zh ? "一般" : "General";
+    if (k === "care_note") return zh ? "护理记录" : "Care note";
+    return k.replace(/_/g, " ");
+  };
+  const Field = ({ label, value, warn }: { label: string; value?: string; warn?: boolean }) => (
+    <div className="py-3.5 border-t border-slate-200 flex flex-col gap-1">
+      <span className="text-[13px] text-slate-500">{label}</span>
+      <span className={`text-[15px] ${warn ? "text-amber-700" : "text-slate-900"}`}>{value || "—"}</span>
+    </div>
+  );
 
+  return (
+    <div>
       {!selectedReviewId ? (
-        // List View
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          {pendingReviews.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 font-light text-lg">
-              {t('no_pending_reviews')}
+        <>
+          <div className="flex flex-wrap items-end gap-4 mb-8">
+            <div className="flex-1">
+              <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+                <ArrowLeft className="w-4 h-4" />{t('back_to_dashboard')}
+              </button>
+              <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">{t('rn_review_queue')}</h1>
+              <p className="text-base text-slate-500 mt-2">{zh ? "AI 写的草稿要护士看过、签字才算数。" : "AI drafts count only after a nurse reviews and signs them."}</p>
             </div>
+            <span className="flex items-baseline gap-2">
+              <span className="text-[56px] leading-none font-light tracking-[-0.04em] text-slate-900 tabular-nums">{pendingReviews.length}</span>
+              <span className="text-[15px] text-slate-500">{zh ? "条等审核" : "waiting"}</span>
+            </span>
+          </div>
+
+          {pendingReviews.length === 0 ? (
+            <p className="m-0 py-6 border-y border-slate-200 text-[16px] text-slate-500">{t('no_pending_reviews')}</p>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <ul className="m-0 p-0 list-none border-b border-slate-200">
               {pendingReviews.map((review) => (
-                <div
-                  key={review.id}
-                  onClick={() => { setSelectedReviewId(review.id); setRnLiabilityChecked(false); }}
-                  className="p-6 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-6"
-                >
-                  {review.photoUrl ? (
-                    <img
-                      src={review.photoUrl}
-                      alt="Observation"
-                      className="w-20 h-20 rounded-xl object-cover border border-slate-200 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-xl bg-indigo-50 border border-indigo-100 shrink-0 flex flex-col items-center justify-center text-indigo-600">
-                      {review.aiResult.observationType === "care_note" ? (
-                        <FileText className="w-6 h-6 mb-1 text-indigo-500 animate-pulse" />
-                      ) : (
-                        <ImageOff className="w-6 h-6 mb-1 opacity-50" />
-                      )}
-                      <span className="text-[9px] uppercase tracking-wider font-medium text-center">
-                        {review.aiResult.observationType === "care_note" ? "Care Note" : "No Image"}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-slate-800">
-                        {review.residentName}
-                      </span>
-                      <span className="text-sm font-light text-slate-500">
-                        ({review.room})
-                      </span>
-                      <span className="ml-2 text-xs font-medium uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                        {review.aiResult.observationType || "General"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-600 font-light truncate mb-2">
-                      {review.aiResult.observation}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs">
-                      <span className="text-slate-400">
-                        {new Date(review.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      {review.aiResult.potentialRiskFlag && (
-                        <span className="text-amber-600 font-medium flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" />
-                          {review.aiResult.potentialRiskFlag}
+                <li key={review.id}>
+                  <button
+                    onClick={() => { setSelectedReviewId(review.id); setRnLiabilityChecked(false); }}
+                    className="group w-full text-left py-5 border-t border-slate-200 flex items-center gap-5 hover:bg-slate-100/60 transition-colors px-3 -mx-3 rounded-xl"
+                  >
+                    {review.photoUrl ? (
+                      <img src={review.photoUrl} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0 flex items-center justify-center text-slate-500">
+                        {review.aiResult.observationType === "care_note" ? <FileText className="w-5 h-5" /> : <ImageOff className="w-5 h-5" />}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-3">
+                        <span className="text-[18px] font-semibold text-slate-900">{review.residentName}</span>
+                        <span className="text-[14px] text-slate-500">{review.room}</span>
+                        <span className="text-[13px] text-slate-500">· {typeLabel(review.aiResult.observationType)}</span>
+                      </div>
+                      <p className="m-0 mt-1 text-[15px] text-slate-600 truncate">{review.aiResult.observation}</p>
+                      {review.aiResult.potentialRiskFlag && review.aiResult.potentialRiskFlag !== "None" && (
+                        <span className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-amber-700">
+                          <AlertTriangle className="w-3.5 h-3.5" />{review.aiResult.potentialRiskFlag}
                         </span>
                       )}
                     </div>
-                  </div>
-                </div>
+                    <span className="text-[13px] text-slate-500 tabular-nums shrink-0">{hhmm(review.timestamp)}</span>
+                    <span className="text-xl text-amber-600 shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </>
       ) : selectedReview ? (
-        // Detail / Review view
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Left panel: Photo or voice visualization */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 overflow-hidden shadow-sm">
-            {selectedReview.photoUrl ? (
-              <img
-                src={selectedReview.photoUrl}
-                alt="Captured observation"
-                className="w-full rounded-xl object-cover max-h-[500px]"
-              />
-            ) : selectedReview.aiResult.observationType === "care_note" ? (
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
-                    <Mic className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-slate-800">{t('caregiver_voice_intake')}</h3>
-                    <p className="text-xs text-slate-500">{t('transcribed_and_compiled')}</p>
-                  </div>
-                </div>
-                
-                {/* Audio Waveform Graphic */}
-                <div className="flex items-end justify-between h-20 px-4 bg-slate-50 rounded-xl border border-slate-100/60 py-4">
-                  {[35, 60, 45, 75, 20, 85, 40, 55, 90, 65, 30, 70, 50, 80, 45, 60, 35, 55, 70, 40].map((h, i) => (
-                    <div 
-                      key={i} 
-                      className="w-1.5 bg-indigo-400 rounded-full" 
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-
-                {selectedReview.aiResult.suggestedCarePlan && (
-                  <div className="space-y-2">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                      {t('native_confirmation_retranslation')}
-                    </span>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-600 leading-relaxed italic font-light">
-                      "{selectedReview.aiResult.suggestedCarePlan}"
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full h-64 rounded-xl bg-slate-50 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-200">
-                <ImageOff className="w-12 h-12 mb-2 opacity-30" />
-                <span className="text-sm font-medium">{t('no_image_available')}</span>
-              </div>
-            )}
+        <>
+          <button onClick={closeDetail} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+            <ArrowLeft className="w-4 h-4" />{t('rn_review_queue')}
+          </button>
+          <div className="flex flex-wrap items-end gap-4 pb-6 border-b border-slate-200 mb-8">
+            <div className="flex-1 min-w-0">
+              <span className="text-[13px] text-slate-500">{selectedReview.room} · {typeLabel(selectedReview.aiResult.observationType)} · {hhmm(selectedReview.timestamp)}</span>
+              <h1 className="text-[36px] leading-[44px] font-semibold text-slate-900">{selectedReview.residentName}</h1>
+            </div>
+            <span className="text-[13px] px-3 py-1.5 rounded-full bg-indigo-50 text-amber-800">{t('requires_rn_signature')}</span>
           </div>
 
-          {/* Details */}
-          <div className="bg-white border rounded-2xl border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div>
-                <h2 className="text-lg font-medium text-slate-800 mb-1">
-                  {selectedReview.residentName}
-                </h2>
-                <p className="text-sm text-slate-500 font-light">
-                  Room {selectedReview.room} •{" "}
-                  {selectedReview.aiResult.observationType}
-                </p>
-              </div>
-              <span className="text-xs font-medium uppercase tracking-wider bg-teal-100 text-teal-800 px-2 py-1 rounded">
-                {t('requires_rn_signature')}
-              </span>
-            </div>
-
-            <div className="p-6 space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="block text-xs font-normal text-slate-400 uppercase">
-                    Visual Observation
-                    <span className="ml-2 normal-case text-slate-400">
-                      {lang === "zh" ? "· 可直接修改" : "· editable"}
-                    </span>
-                  </span>
-                  {wasEdited && (
-                    <button
-                      onClick={handleRevertToAi}
-                      className="text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2"
-                    >
-                      {lang === "zh" ? "还原 AI 原文" : "Revert to AI draft"}
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  value={editedObservation}
-                  onChange={(e) => setEditedObservation(e.target.value)}
-                  rows={5}
-                  className="w-full bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-700 leading-relaxed font-light resize-y focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-                {wasEdited && (
-                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    {lang === "zh"
-                      ? "已修改 AI 原文。签字后，原文与修改内容都会写入审计日志。"
-                      : "AI draft modified. Both the original and your edit are written to the audit log on sign-off."}
-                  </p>
-                )}
-              </div>
-
-              {selectedReview.aiResult.observationType === "excrement" ? (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                        Colour
-                      </span>
-                      <p className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-normal text-sm text-slate-700">
-                        {selectedReview.aiResult.colour || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                        Bristol Stool Type
-                      </span>
-                      <p className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-normal text-sm text-slate-700">
-                        {selectedReview.aiResult.bristolStoolType || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                      Potential Risk Flag
-                    </span>
-                    <p className="bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-100 font-normal text-sm">
-                      {selectedReview.aiResult.potentialRiskFlag}
-                    </p>
-                  </div>
-                </>
-              ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-start">
+            {/* Left: what the carer sent */}
+            <div className="flex flex-col gap-5">
+              {selectedReview.photoUrl ? (
+                <img src={selectedReview.photoUrl} alt={zh ? "护工拍的照片" : "Photo from the carer"} className="w-full rounded-[24px] object-cover max-h-[520px]" />
+              ) : selectedReview.aiResult.observationType === "care_note" ? (
                 <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-700"><Mic className="w-5 h-5" /></span>
                     <div>
-                      <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                        Size / Type Estimate
-                      </span>
-                      <p className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-normal text-sm text-slate-700">
-                        {selectedReview.aiResult.estimatedSizeOrType}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                        Potential Risk Flag
-                      </span>
-                      <p className="bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-100 font-normal text-sm">
-                        {selectedReview.aiResult.potentialRiskFlag}
-                      </p>
+                      <h3 className="m-0 text-[16px] font-semibold text-slate-900 font-sans">{t('caregiver_voice_intake')}</h3>
+                      <p className="m-0 text-[13px] text-slate-500">{t('transcribed_and_compiled')}</p>
                     </div>
                   </div>
-                  {selectedReview.aiResult.bodyLocation && (
-                    <div>
-                      <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                        Location
-                      </span>
-                      <p className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-normal text-sm text-slate-700">
-                        {selectedReview.aiResult.bodyLocation}
-                      </p>
+                  {selectedReview.aiResult.suggestedCarePlan && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[13px] text-slate-500">{t('native_confirmation_retranslation')}</span>
+                      <p className="m-0 text-[16px] leading-7 text-slate-700 border-l-2 border-amber-400 pl-4">{selectedReview.aiResult.suggestedCarePlan}</p>
                     </div>
                   )}
                 </div>
-              )}
-
-              {selectedReview.aiResult.suggestedCarePlan && (
-                <div className="mt-4">
-                  <span className="block text-xs font-normal text-slate-400 uppercase mb-2">
-                    {t('ai_suggested_care_plan')}
-                  </span>
-                  <div className="bg-indigo-50 text-indigo-800 p-4 rounded-xl border border-indigo-100 font-medium text-sm whitespace-pre-wrap leading-relaxed shadow-sm">
-                    {selectedReview.aiResult.suggestedCarePlan}
-                  </div>
+              ) : (
+                <div className="w-full h-64 rounded-[24px] bg-slate-100 flex flex-col items-center justify-center text-slate-500">
+                  <ImageOff className="w-8 h-8 mb-2" />
+                  <span className="text-[14px]">{t('no_image_available')}</span>
                 </div>
               )}
+            </div>
 
-              {/* Patient Consent Status & RN Clinical Accountability Sign-off */}
-              <div className="mt-6 p-4 rounded-xl border border-indigo-100 bg-indigo-50/20 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg">
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                  <span>
-                    {lang === "zh"
-                      ? "长者隐私知情同意：已验证（照护团队已确认授权符合 1988 隐私法）"
-                      : "Resident Consent: Verified (Confirmed by Caregiver under Privacy Act 1988 / APPs)"}
-                  </span>
-                </div>
-                
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rnLiabilityChecked}
-                    onChange={(e) => setRnLiabilityChecked(e.target.checked)}
-                    className="mt-1 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                  />
-                  <div className="text-xs text-slate-700 font-medium font-sans">
-                    <span className="font-bold text-indigo-800 block mb-0.5">
-                      {lang === "zh" ? "✍️ 注册护士临床复核签字" : "✍️ Registered Nurse Clinical Sign-off"}
-                    </span>
-                    {lang === "zh"
-                      ? "我确认已根据当前可用信息，对该 AI 辅助生成的记录完成专业复核，并进行了必要修正。该确认不取代机构政策、注册提供者责任或适用法律要求。"
-                      : "I confirm that I have professionally reviewed this AI-assisted record using the information currently available and made any necessary corrections. This confirmation does not replace provider obligations, facility policy, or applicable legal requirements."}
-                  </div>
-                </label>
+            {/* Right: draft, details, sign-off */}
+            <div className="flex flex-col">
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-[13px] text-slate-500">{zh ? "AI 草稿（可以直接改）" : "AI draft (editable)"}</span>
+                {wasEdited && <button onClick={handleRevertToAi} className="text-[13px] text-slate-600 underline underline-offset-2">{zh ? "还原 AI 原文" : "Revert to AI draft"}</button>}
+              </div>
+              <textarea
+                value={editedObservation}
+                onChange={(e) => setEditedObservation(e.target.value)}
+                rows={6}
+                aria-label={zh ? "AI 草稿" : "AI draft"}
+                className="w-full bg-white p-4 rounded-2xl border border-slate-200 text-[16px] text-slate-900 leading-7 resize-y focus:outline-none focus:border-slate-900"
+              />
+              {wasEdited && (
+                <p className="mt-2 text-[13px] text-amber-700">
+                  {zh ? "已修改 AI 原文。签字后，原文和修改都会写进审计日志。" : "AI draft modified. Both versions go to the audit log on sign-off."}
+                </p>
+              )}
+
+              <div className="mt-6 border-b border-slate-200">
+                {selectedReview.aiResult.observationType === "excrement" ? (
+                  <>
+                    <Field label={zh ? "颜色" : "Colour"} value={selectedReview.aiResult.colour} />
+                    <Field label="Bristol Stool Type" value={selectedReview.aiResult.bristolStoolType as any} />
+                    <Field label={zh ? "可能的风险" : "Potential risk"} value={selectedReview.aiResult.potentialRiskFlag} warn />
+                  </>
+                ) : (
+                  <>
+                    {selectedReview.aiResult.observationType !== "care_note" && <Field label={zh ? "大小 / 类型" : "Size / type"} value={selectedReview.aiResult.estimatedSizeOrType} />}
+                    <Field label={zh ? "可能的风险" : "Potential risk"} value={selectedReview.aiResult.potentialRiskFlag} warn />
+                    {selectedReview.aiResult.bodyLocation && <Field label={zh ? "部位" : "Location"} value={selectedReview.aiResult.bodyLocation} />}
+                  </>
+                )}
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col gap-4">
-                <p className="text-xs text-slate-400 text-center font-light">
-                  {t("ai_observation_disclaimer")}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={closeDetail} className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
-                    <Edit3 className="w-4 h-4" />
-                    {lang === "zh" ? "退回队列，稍后处理" : "Back to queue"}
+              {selectedReview.aiResult.suggestedCarePlan && selectedReview.aiResult.observationType !== "care_note" && (
+                <div className="mt-6 rounded-2xl bg-indigo-50 p-5">
+                  <span className="text-[13px] text-amber-800">{t('ai_suggested_care_plan')}</span>
+                  <p className="m-0 mt-1 text-[15px] leading-7 text-slate-900 whitespace-pre-wrap">{selectedReview.aiResult.suggestedCarePlan}</p>
+                </div>
+              )}
+
+              {/* Consent + RN sign-off */}
+              <div className="mt-8 flex flex-col gap-4">
+                <span className="flex items-start gap-2 text-[13px] text-emerald-700">
+                  <CheckCircle className="w-4 h-4 shrink-0 mt-px" />
+                  {zh ? "长者隐私知情同意已确认（澳洲 1988 隐私法）" : "Resident consent verified (Privacy Act 1988 / APPs)"}
+                </span>
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input type="checkbox" checked={rnLiabilityChecked} onChange={(e) => setRnLiabilityChecked(e.target.checked)} className="mt-1 w-[18px] h-[18px] accent-slate-900 cursor-pointer" />
+                  <span className="text-[14px] leading-6 text-slate-700">
+                    <span className="block text-[15px] font-semibold text-slate-900">{zh ? "注册护士临床复核签字" : "Registered Nurse sign-off"}</span>
+                    {zh
+                      ? "我确认已根据现有信息，专业复核了这份 AI 辅助生成的记录，并做了必要的修改。这不取代机构政策、注册提供者责任或法律要求。"
+                      : "I confirm I have professionally reviewed this AI-assisted record with the information available and made any necessary corrections. This does not replace provider obligations, facility policy or legal requirements."}
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button onClick={handleSignOff} disabled={!rnLiabilityChecked}
+                    className="inline-flex items-center gap-2 min-h-12 px-7 rounded-full bg-slate-900 text-white text-[16px] font-semibold disabled:bg-black/10 disabled:text-slate-500 disabled:cursor-not-allowed">
+                    <CheckCircle className="w-4 h-4" />{t('confirm_save_record')}
                   </button>
-                  <button
-                    onClick={handleSignOff}
-                    disabled={!rnLiabilityChecked}
-                    className={`py-3 font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm ${
-                      rnLiabilityChecked
-                        ? "bg-teal-600 hover:bg-teal-700 text-white cursor-pointer active:scale-[0.99]"
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                    }`}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {t('confirm_save_record')}
+                  <button onClick={closeDetail} className="inline-flex items-center gap-2 min-h-12 px-6 rounded-full border border-slate-300 bg-white text-slate-900 text-[16px]">
+                    <Edit3 className="w-4 h-4" />{zh ? "回到队列，稍后处理" : "Back to queue"}
                   </button>
                 </div>
+                <p className="m-0 text-[12px] leading-5 text-slate-500">{t("ai_observation_disclaimer")}</p>
               </div>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

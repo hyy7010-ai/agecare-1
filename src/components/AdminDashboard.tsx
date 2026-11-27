@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, Settings, UserPlus, Clock, TrendingUp, AlertTriangle, CheckCircle, BarChart3, Map } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'audit'>('analytics');
+  const { lang } = useLanguage();
+  const zh = lang === 'zh';
+  const T = (a: string, b: string) => (zh ? a : b);
   
   const [dbUsers, setDbUsers] = useState<any[]>([]);
   const [dbAuditLogs, setDbAuditLogs] = useState<any[]>([]);
@@ -69,249 +73,137 @@ export function AdminDashboard() {
     { zone: 'Corridor C', incidents: 5, risk: 'Medium' },
   ];
 
+  const tabCls = (on: boolean) => `shrink-0 py-3 text-[15px] border-b-2 -mb-px transition-colors ${on ? 'border-amber-400 text-slate-900 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-900'}`;
+  const tip = { borderRadius: 12, border: '1px solid #E7DFD1', boxShadow: 'none', background: '#FAF6EE' };
+  const kpis = [
+    { label: T('可能漏报的严重事故', 'Missed reporting risks'), value: '3', note: T('本周 +1 · 可能没登记的 SIRS 事件', '+1 this week · possible unlogged SIRS events'), tone: 'text-red-600' },
+    { label: T('护理时长达标率', 'Care minutes compliance'), value: '96.8%', note: T('达标 · 每位长者要求 200 分钟', 'Target met · 200 min per resident'), tone: 'text-emerald-700' },
+    { label: T('今年已报 SIRS', 'SIRS submitted (YTD)'), value: '12', note: T('全部已成功提交', 'All submitted'), tone: 'text-slate-500' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-indigo-600" />
+    <div className="max-w-[1200px] mx-auto">
+      <div className="flex flex-wrap items-end gap-4 mb-6">
+        <div className="flex-1">
+          <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">{T('管理总览', 'Executive overview')}</h1>
+          <p className="text-base text-slate-500 mt-2">{T('院舍数据、合规指标和风险分析。', 'Facility insights, compliance metrics and risk analysis.')}</p>
+        </div>
+        <span className="text-[13px] text-slate-500">{T('刚刚更新', 'Updated just now')}</span>
+      </div>
+
+      <div role="tablist" className="flex gap-6 border-b border-slate-200 mb-10 overflow-x-auto">
+        <button role="tab" aria-selected={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} className={tabCls(activeTab === 'analytics')}>{T('数据分析', 'Analytics')}</button>
+        <button role="tab" aria-selected={activeTab === 'users'} onClick={() => setActiveTab('users')} className={tabCls(activeTab === 'users')}>{T('用户管理', 'Users')}</button>
+        <button role="tab" aria-selected={activeTab === 'audit'} onClick={() => setActiveTab('audit')} className={tabCls(activeTab === 'audit')}>{T('审计日志', 'Audit log')}</button>
+      </div>
+
+      {activeTab === 'analytics' ? (
+        <div className="flex flex-col gap-12">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Executive Dashboard</h1>
-            <p className="text-slate-500 font-medium mt-1">Facility insights, compliance metrics, and risk analysis</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 border-y border-slate-200">
+              {kpis.map((k, i) => (
+                <div key={k.label} className={`py-6 ${i > 0 ? 'md:pl-8 md:border-l border-t md:border-t-0 border-slate-200' : ''} ${i < 2 ? 'md:pr-8' : ''}`}>
+                  <span className="text-[13px] text-slate-500">{k.label}</span>
+                  <div className="mt-2 text-[56px] leading-none font-light tracking-[-0.04em] text-slate-900 tabular-nums">{k.value}</div>
+                  <span className={`mt-3 block text-[13px] ${k.tone}`}>{k.note}</span>
+                </div>
+              ))}
+            </div>
+            <span className="mt-2 block text-[12px] text-slate-400">{T('示范数据', 'Demo data')}</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div>
+              <h2 className="text-[26px] font-semibold text-slate-900">{T('护理时长趋势', 'Care minutes trend')}</h2>
+              <p className="text-[14px] text-slate-500 mt-1 mb-4">{T('实际（实线）和要求的 200 分钟（虚线）', 'Actual (solid) against the required 200 min (dashed)')}</p>
+              <div className="h-64 border-t border-slate-200 pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={careMinutesData} margin={{ top: 10, right: 16, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#F5B700" stopOpacity={0.35}/>
+                        <stop offset="95%" stopColor="#F5B700" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#E7DFD1" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} domain={[160, 240]} />
+                    <Tooltip contentStyle={tip} />
+                    <Area isAnimationActive={false} type="monotone" dataKey="actual" name={T('实际分钟', 'Actual')} stroke="#1F1B16" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" />
+                    <Area isAnimationActive={false} type="monotone" dataKey="required" name={T('要求 200', 'Required 200')} stroke="#5F8746" strokeWidth={1.5} strokeDasharray="5 5" fill="none" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-[26px] font-semibold text-slate-900">{T('高风险区域', 'High-risk areas')}</h2>
+              <p className="text-[14px] text-slate-500 mt-1 mb-4">{T('按事故次数，红色是高风险', 'By incidents recorded; red is high risk')}</p>
+              <div className="h-64 border-t border-slate-200 pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={riskHeatmapData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid horizontal={false} stroke="#E7DFD1" />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
+                    <YAxis dataKey="zone" type="category" width={170} axisLine={false} tickLine={false} tick={{ fill: '#5E5549', fontSize: 12 }} />
+                    <Tooltip cursor={{ fill: '#F3EDE2' }} contentStyle={tip} />
+                    <Bar isAnimationActive={false} dataKey="incidents" name={T('事故次数', 'Incidents')} radius={[0, 6, 6, 0]} barSize={14}>
+                      {riskHeatmapData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.risk === 'High' ? '#D4382C' : entry.risk === 'Medium' ? '#F5B700' : '#A2BF8B'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-          <Clock className="w-4 h-4" />
-          <span>Last updated: Just now</span>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="border-b border-slate-200 flex overflow-x-auto hide-scrollbar">
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`whitespace-nowrap px-6 py-4 text-sm font-bold transition-colors border-b-2 ${
-              activeTab === 'analytics' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Data Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`whitespace-nowrap px-6 py-4 text-sm font-bold transition-colors border-b-2 ${
-              activeTab === 'users' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            User Management
-          </button>
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`whitespace-nowrap px-6 py-4 text-sm font-bold transition-colors border-b-2 ${
-              activeTab === 'audit' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Audit Logs
-          </button>
-        </div>
-
-        <div className="p-6 bg-slate-50">
-          {activeTab === 'analytics' ? (
-            <div className="space-y-6">
-              {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-slate-500 mb-1">Missed Reporting Risks</p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-3xl font-black text-slate-900">3</h3>
-                      <span className="text-sm font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> +1 this week
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2">Potential unlogged SIRS events</p>
-                  </div>
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-slate-500 mb-1">Care Mins Compliance</p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-3xl font-black text-slate-900">96.8%</h3>
-                      <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" /> Target met
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2">Required: 200 mins/resident</p>
-                  </div>
-                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-emerald-600" />
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-slate-500 mb-1">Total SIRS Submitted</p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-3xl font-black text-slate-900">12</h3>
-                      <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> YTD
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2">All successfully submitted</p>
-                  </div>
-                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-indigo-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Chart 1 */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-indigo-500" /> Care Minutes Trend
-                  </h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={careMinutesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#1F1B16" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#1F1B16" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7DFD1" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
-                        <Tooltip 
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Legend iconType="circle" />
-                        <Area type="monotone" dataKey="actual" name="Actual Mins" stroke="#1F1B16" strokeWidth={3} fillOpacity={1} fill="url(#colorActual)" />
-                        <Area type="monotone" dataKey="required" name="Required (200)" stroke="#5F8746" strokeWidth={2} strokeDasharray="5 5" fill="none" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Heatmap/Bar Chart */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Map className="w-5 h-5 text-orange-500" /> High-Risk Area Heatmap
-                  </h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={riskHeatmapData} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E7DFD1" />
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#7D7264', fontSize: 12 }} />
-                        <YAxis dataKey="zone" type="category" axisLine={false} tickLine={false} tick={{ fill: '#5E5549', fontSize: 11, fontWeight: 500 }} />
-                        <Tooltip
-                          cursor={{fill: '#F3EDE2'}}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="incidents" name="Incidents Recorded" radius={[0, 4, 4, 0]}>
-                          {
-                            riskHeatmapData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.risk === 'High' ? '#D4382C' : entry.risk === 'Medium' ? '#F5B700' : '#5F8746'} />
-                            ))
-                          }
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'users' ? (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-bold text-slate-700">System Users</h3>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" /> Invite User
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white text-slate-500 font-medium border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-4">User Name</th>
-                      <th className="px-6 py-4">Role</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Last Login</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {dbUsers.length > 0 ? dbUsers.map(u => (
-                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-800">{u.name || u.email || 'Unknown User'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            u.role === 'admin' || u.role === 'manager' ? 'bg-indigo-100 text-indigo-700' : 
-                            u.role === 'rn' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {u.role || 'caregiver'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                            <span className={`w-2 h-2 rounded-full ${u.status === 'Active' || !u.status ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                            {u.status || 'Active'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-500 font-medium">{u.lastLogin || 'Recent'}</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-medium">No users found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      ) : activeTab === 'users' ? (
+        <div>
+          <div className="flex items-end justify-between mb-4">
+            <h2 className="text-[26px] font-semibold text-slate-900">{T('系统用户', 'System users')}</h2>
+            <button className="inline-flex items-center gap-2 min-h-11 px-5 rounded-full bg-slate-900 text-white text-[15px] font-semibold hover:bg-slate-700 transition-colors">
+              <UserPlus className="w-4 h-4" /> {T('邀请用户', 'Invite user')}
+            </button>
+          </div>
+          {dbUsers.length === 0 ? (
+            <p className="m-0 py-6 border-y border-slate-200 text-[15px] text-slate-500">{T('没有找到用户。', 'No users found.')}</p>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 bg-slate-50">
-                <h3 className="font-bold text-slate-700">Security & Audit Logs</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white text-slate-500 font-medium border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-4">Time</th>
-                      <th className="px-6 py-4">User</th>
-                      <th className="px-6 py-4">Action</th>
-                      <th className="px-6 py-4">Target</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {dbAuditLogs.length > 0 ? dbAuditLogs.map(log => {
-                      const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp || Date.now());
-                      return (
-                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-slate-500 flex items-center gap-1.5 font-medium">
-                          <Clock className="w-4 h-4 text-slate-400" /> {dateObj.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-700">{log.userEmail || log.userId || 'System'}</td>
-                        <td className="px-6 py-4 text-slate-600 font-medium">{log.action}</td>
-                        <td className="px-6 py-4 text-slate-500">{log.details || log.resourceId || '-'}</td>
-                      </tr>
-                    )}) : (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-medium">No audit logs found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ul className="m-0 p-0 list-none border-b border-slate-200">
+              {dbUsers.map((u) => (
+                <li key={u.id} className="py-4 border-t border-slate-200 flex flex-wrap items-center gap-x-6 gap-y-1">
+                  <span className="flex-1 min-w-[200px] text-[16px] font-semibold text-slate-900">{u.name || u.displayName || u.email || 'Unknown User'}</span>
+                  <span className="w-28 text-[14px] text-slate-600 capitalize">{u.role || 'caregiver'}</span>
+                  <span className="w-24 flex items-center gap-2 text-[14px] text-slate-600">
+                    <span className={`w-2 h-2 rounded-full ${u.status === 'Active' || !u.status ? 'bg-emerald-500' : 'bg-slate-300'}`} />{u.status || 'Active'}
+                  </span>
+                  <span className="w-28 text-[13px] text-slate-500">{u.lastLogin || T('最近', 'Recent')}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      </div>
+      ) : (
+        <div>
+          <h2 className="text-[26px] font-semibold text-slate-900 mb-4">{T('安全和审计日志', 'Security and audit log')}</h2>
+          {dbAuditLogs.length === 0 ? (
+            <p className="m-0 py-6 border-y border-slate-200 text-[15px] text-slate-500">{T('没有审计记录。', 'No audit logs found.')}</p>
+          ) : (
+            <ul className="m-0 p-0 list-none border-b border-slate-200">
+              {dbAuditLogs.map((log) => {
+                const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp || Date.now());
+                return (
+                  <li key={log.id} className="py-4 border-t border-slate-200 flex flex-col sm:flex-row gap-x-6 gap-y-1">
+                    <span className="sm:w-44 shrink-0 text-[13px] text-slate-500 tabular-nums">{dateObj.toLocaleString()}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[15px] text-slate-900">{log.action}</span>
+                      <span className="block text-[13px] text-slate-500">{log.userEmail || log.userId || 'System'}{(log.details || log.resourceId) ? ` · ${log.details || log.resourceId}` : ''}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-

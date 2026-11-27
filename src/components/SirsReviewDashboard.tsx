@@ -3,7 +3,8 @@ import { db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { SIRSAlertData } from '../types';
 import { getLocalSirsEvents, subscribeLocalSirsEvents, updateLocalSirsEvent } from '../lib/localReviewQueue';
-import { ShieldAlert, CheckCircle, Clock, AlertTriangle, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SirsEvent extends SIRSAlertData {
   id: string;
@@ -18,6 +19,9 @@ export function SirsReviewDashboard({ onBack }: { onBack: () => void }) {
   const [events, setEvents] = useState<SirsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<SirsEvent | null>(null);
+  const { lang } = useLanguage();
+  const zh = lang === 'zh';
+  const T = (a: string, b: string) => (zh ? a : b);
   
   useEffect(() => {
     // Merge Firestore events with the local demo store (caregiver reports filed in
@@ -88,160 +92,121 @@ export function SirsReviewDashboard({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const when = (ev: SirsEvent) => {
+    const t: any = ev.timestamp;
+    const d = t?.toDate ? t.toDate() : typeof t === 'string' ? new Date(t) : t?.seconds ? new Date(t.seconds * 1000) : null;
+    return d ? d.toLocaleString(zh ? 'zh-CN' : 'en-AU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : T('刚刚', 'Just now');
+  };
+  const statusText = (st?: string) => st === 'submitted' ? T('已提交监管机构', 'Submitted') : st === 'acknowledged' ? T('处理中', 'In progress') : T('等处理', 'Waiting');
+  const statusTone = (st?: string) => st === 'submitted' ? 'text-emerald-700' : st === 'acknowledged' ? 'text-amber-700' : 'text-red-600';
+  const title = (ev: SirsEvent) => ev.reportInfo?.category || ev.category || T('事故报告', 'Incident report');
+  const actions = selectedEvent ? [selectedEvent.reportInfo?.autofillReport?.immediateSafetyActions, selectedEvent.reportInfo?.autofillReport?.preventiveActions, selectedEvent.reportInfo?.autofillReport?.regulatorNotification].filter(Boolean) : [];
+
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="w-8 h-8 text-red-600" />
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">SIRS Management Hub</h1>
-            <p className="text-slate-500 mt-1">Review and action reported serious incidents (ACQSC Compliance)</p>
-          </div>
+    <div className="max-w-[1200px] mx-auto">
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+        <ArrowLeft className="w-4 h-4" />{T('返回看板', 'Back to dashboard')}
+      </button>
+      <div className="flex flex-wrap items-end gap-4 mb-8">
+        <div className="flex-1">
+          <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">{T('严重事故（SIRS）', 'Serious incidents (SIRS)')}</h1>
+          <p className="text-base text-slate-500 mt-2">{T('审核并处理上报的严重事故，按澳洲老年护理质量与安全委员会的要求。', 'Review and action reported serious incidents (ACQSC).')}</p>
         </div>
-        <button 
-          onClick={onBack}
-          className="text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors"
-        >
-          Back to Dashboard
-        </button>
+        <span className="flex items-baseline gap-2">
+          <span className="text-[56px] leading-none font-light tracking-[-0.04em] text-slate-900 tabular-nums">{events.filter((e) => e.status !== 'submitted').length}</span>
+          <span className="text-[15px] text-slate-500">{T('件未完成', 'open')}</span>
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* List View */}
-        <div className="col-span-1 lg:col-span-1 border border-slate-200 rounded-2xl bg-white overflow-hidden flex flex-col h-[700px]">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-            <h3 className="font-bold text-slate-700">Incident Reports ({events.length})</h3>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {loading ? (
-              <div className="p-4 text-center text-slate-500">Loading incidents...</div>
-            ) : events.length === 0 ? (
-              <div className="p-4 text-center text-slate-500">No SIRS reports found.</div>
-            ) : (
-              <div className="space-y-2">
-                {events.map(ev => (
-                  <button 
-                    key={ev.id}
-                    onClick={() => setSelectedEvent(ev)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
-                      selectedEvent?.id === ev.id 
-                        ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' 
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        ev.priority === 1 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        Priority {ev.priority}
-                      </span>
-                      {ev.status === 'submitted' ? (
-                        <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      ) : ev.status === 'acknowledged' ? (
-                        <Clock className="w-4 h-4 text-amber-500" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                      )}
-                    </div>
-                    <div className="font-medium text-slate-900 text-sm mb-1 truncate">
-                      {ev.reportInfo?.category || ev.category || 'Incident Report'}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {ev.timestamp?.toDate ? new Date(ev.timestamp.toDate()).toLocaleString() : 'Just now'}
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_2fr] gap-12 items-start">
+        {/* List */}
+        <div className="flex flex-col">
+          <span className="text-[13px] text-slate-500 pb-2">{T(`事故报告　${events.length}`, `Incident reports  ${events.length}`)}</span>
+          {loading ? (
+            <p className="m-0 py-4 border-y border-slate-200 text-[15px] text-slate-500">{T('载入中…', 'Loading…')}</p>
+          ) : events.length === 0 ? (
+            <p className="m-0 py-4 border-y border-slate-200 text-[15px] text-slate-500">{T('还没有 SIRS 报告。', 'No SIRS reports yet.')}</p>
+          ) : (
+            <div className="flex flex-col border-b border-slate-200 max-h-[640px] overflow-y-auto">
+              {events.map((ev) => {
+                const on = selectedEvent?.id === ev.id;
+                return (
+                  <button key={ev.id} onClick={() => setSelectedEvent(ev)} aria-current={on ? 'true' : undefined}
+                    className={`text-left py-4 px-3 -mx-3 flex flex-col gap-1 transition-colors ${on ? 'bg-slate-100 rounded-xl' : 'border-t border-slate-200 hover:bg-slate-100/60'}`}>
+                    <span className="flex items-center gap-2 text-[13px]">
+                      <span className={`w-2 h-2 rounded-full ${ev.priority === 1 ? 'bg-red-500' : 'bg-amber-400'}`} aria-hidden="true" />
+                      <span className={ev.priority === 1 ? 'text-red-600 font-medium' : 'text-amber-700'}>{T(`第 ${ev.priority} 级`, `Priority ${ev.priority}`)}</span>
+                      <span className={`ml-auto ${statusTone(ev.status)}`}>{statusText(ev.status)}</span>
+                    </span>
+                    <span className="text-[16px] font-semibold text-slate-900 truncate">{title(ev)}</span>
+                    <span className="text-[13px] text-slate-500 tabular-nums">{when(ev)}</span>
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Detail View */}
-        <div className="col-span-1 lg:col-span-2 border border-slate-200 rounded-2xl bg-white flex flex-col h-[700px] overflow-hidden">
+        {/* Detail */}
+        <div className="flex flex-col">
           {selectedEvent ? (
-            <div className="flex-1 overflow-y-auto">
-              <div className={`p-6 border-b ${
-                selectedEvent.priority === 1 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'
-              }`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-1">{selectedEvent.reportInfo?.category || selectedEvent.category || 'Incident Report'}</h2>
-                    <p className="text-slate-600 font-medium">Reported by {selectedEvent.reporterName || 'Staff'}</p>
-                  </div>
-                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    selectedEvent.priority === 1 ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'
-                  }`}>
-                    Priority {selectedEvent.priority}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <div className="bg-white/60 px-3 py-1 rounded-md text-sm font-medium border border-white">
-                    Due: {selectedEvent.reportInfo?.timeframe || (selectedEvent.priority === 1 ? '24 Hours' : '30 Days')}
-                  </div>
-                  <div className="bg-white/60 px-3 py-1 rounded-md text-sm font-medium border border-white capitalize">
-                    Status: {selectedEvent.status || 'Pending Review'}
-                  </div>
-                </div>
+            <>
+              <div className={`rounded-[24px] p-6 ${selectedEvent.priority === 1 ? 'bg-red-50' : 'bg-amber-50'}`}>
+                <span className="flex items-center gap-2 text-[13px] font-medium text-red-600">
+                  <span className={`w-2 h-2 rounded-full ${selectedEvent.priority === 1 ? 'bg-red-500' : 'bg-amber-400'}`} aria-hidden="true" />
+                  {T(`第 ${selectedEvent.priority} 级`, `Priority ${selectedEvent.priority}`)}
+                  <span className="text-slate-600 font-normal">· {T('期限', 'Due')} {selectedEvent.reportInfo?.timeframe || (selectedEvent.priority === 1 ? T('24 小时', '24 hours') : T('30 天', '30 days'))}</span>
+                </span>
+                <h2 className="mt-2 text-[30px] leading-[38px] font-semibold text-slate-900">{title(selectedEvent)}</h2>
+                <p className="m-0 mt-1 text-[15px] text-slate-600">{T(`报告人：${selectedEvent.reporterName || '员工'}`, `Reported by ${selectedEvent.reporterName || 'staff'}`)}　·　<span className={statusTone(selectedEvent.status)}>{statusText(selectedEvent.status)}</span></p>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Original Narrative</h3>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-700 whitespace-pre-wrap">
-                    {selectedEvent.description || selectedEvent.message || selectedEvent.reportInfo?.autofillReport?.whatHappened}
-                  </div>
-                </div>
+              <div className="mt-8">
+                <span className="text-[13px] text-slate-500">{T('原始描述', 'Original narrative')}</span>
+                <p className="m-0 mt-2 text-[16px] leading-7 text-slate-900 whitespace-pre-wrap border-l-2 border-amber-400 pl-4">
+                  {selectedEvent.description || selectedEvent.message || selectedEvent.reportInfo?.autofillReport?.whatHappened}
+                </p>
+              </div>
 
-                <div>
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">AI Compliance Analysis</h3>
-                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                    <p className="text-indigo-900 font-medium whitespace-pre-wrap">{selectedEvent.reportInfo?.uncertaintyFlag || 'High confidence classification based on ACQSC guidelines.'}</p>
-                  </div>
-                </div>
+              <div className="mt-8">
+                <span className="text-[13px] text-slate-500">{T('AI 合规分析', 'AI compliance analysis')}</span>
+                <p className="m-0 mt-2 text-[15px] leading-7 text-slate-800 whitespace-pre-wrap">{selectedEvent.reportInfo?.uncertaintyFlag || T('根据 ACQSC 指引，分类可信度高。', 'High confidence classification based on ACQSC guidelines.')}</p>
+              </div>
 
-                <div>
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Required Actions</h3>
-                  <ul className="space-y-2">
-                    {[selectedEvent.reportInfo?.autofillReport?.immediateSafetyActions, selectedEvent.reportInfo?.autofillReport?.preventiveActions, selectedEvent.reportInfo?.autofillReport?.regulatorNotification].filter(Boolean).map((action, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <ChevronRight className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-700">{action}</span>
+              {actions.length > 0 && (
+                <div className="mt-8">
+                  <span className="text-[13px] text-slate-500">{T('要做的事', 'Required actions')}</span>
+                  <ol className="m-0 mt-2 p-0 list-none border-b border-slate-200">
+                    {actions.map((a, i) => (
+                      <li key={i} className="py-3.5 border-t border-slate-200 flex gap-4 text-[15px] leading-6 text-slate-900">
+                        <span className="w-6 shrink-0 text-slate-500 tabular-nums">{i + 1}</span><span>{a}</span>
                       </li>
                     ))}
-                  </ul>
+                  </ol>
                 </div>
+              )}
 
-                <div className="pt-6 border-t border-slate-200 flex justify-end gap-3">
-                  {selectedEvent.status !== 'submitted' && (
-                    <>
-                      <button 
-                        onClick={() => handleStatusChange(selectedEvent.id, 'acknowledged')}
-                        className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                      >
-                        Acknowledge (In Progress)
+              <div className="mt-8 flex flex-wrap gap-3">
+                {selectedEvent.status !== 'submitted' ? (
+                  <>
+                    <button onClick={() => handleStatusChange(selectedEvent.id, 'submitted')}
+                      className="inline-flex items-center gap-2 min-h-12 px-7 rounded-full bg-slate-900 text-white text-[16px] font-semibold hover:bg-slate-700 transition-colors">
+                      <CheckCircle className="w-4 h-4" /> {T('提交到 ACQSC', 'Submit to ACQSC')}
+                    </button>
+                    {selectedEvent.status !== 'acknowledged' && (
+                      <button onClick={() => handleStatusChange(selectedEvent.id, 'acknowledged')}
+                        className="inline-flex items-center min-h-12 px-6 rounded-full border border-slate-300 bg-white text-slate-900 text-[16px]">
+                        {T('标记为处理中', 'Mark in progress')}
                       </button>
-                      <button 
-                        onClick={() => handleStatusChange(selectedEvent.id, 'submitted')}
-                        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
-                      >
-                        <CheckCircle className="w-5 h-5" /> Submit to ACQSC Portal
-                      </button>
-                    </>
-                  )}
-                  {selectedEvent.status === 'submitted' && (
-                    <div className="px-6 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold rounded-xl flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5" /> Officially Submitted to Commission
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-[15px] text-emerald-700"><CheckCircle className="w-4 h-4" /> {T('已正式提交给委员会', 'Officially submitted to the Commission')}</span>
+                )}
               </div>
-            </div>
+            </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
-              <ShieldAlert className="w-16 h-16 mb-4 text-slate-200" />
-              <h3 className="text-xl font-bold text-slate-500 mb-2">Select an Incident</h3>
-              <p>Choose an incident from the list to review details, AI analysis, and take official action.</p>
-            </div>
+            <p className="m-0 py-10 border-y border-slate-200 text-[16px] text-slate-500">{T('从左边选一件事故，看详情、AI 分析，再处理。', 'Pick an incident on the left to see details and AI analysis, then act.')}</p>
           )}
         </div>
       </div>
