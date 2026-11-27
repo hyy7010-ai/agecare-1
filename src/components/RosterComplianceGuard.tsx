@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  ArrowLeft,
-  AlertTriangle,
-  Lock,
-  ShieldCheck,
-  Clock,
-  Users,
-  XOctagon,
-} from "lucide-react";
+import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -35,7 +27,8 @@ const DEMO_SHIFTS: Shift[] = [
 ];
 
 export function RosterComplianceGuard({ onBack }: RosterComplianceGuardProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const zh = lang === "zh";
   const [shifts, setShifts] = useState<Shift[]>(DEMO_SHIFTS);
 
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
@@ -105,276 +98,125 @@ export function RosterComplianceGuard({ onBack }: RosterComplianceGuardProps) {
   ];
   const shiftTypes = ["Day", "Evening", "Night"];
 
+  const DAY_ZH: Record<string, string> = { Monday: "周一", Tuesday: "周二", Wednesday: "周三", Thursday: "周四", Friday: "周五", Saturday: "周六", Sunday: "周日" };
+  const SHIFT_ZH: Record<string, string> = { Day: "早班", Evening: "晚班", Night: "夜班" };
+  const dayL = (d: string) => (zh ? DAY_ZH[d] || d : d);
+  const shiftL = (s: string) => (zh ? SHIFT_ZH[s] || s : `${s} shift`);
+  const locked = hasRnBreach || !isCareMinutesCompliant;
+  const Meter = ({ label, value, target, ok }: { label: string; value: number; target: number; ok: boolean }) => (
+    <div className="py-5 border-t border-slate-200">
+      <span className="text-[13px] text-slate-500">{label}</span>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className={`text-[44px] leading-none font-light tracking-[-0.03em] tabular-nums ${ok ? "text-slate-900" : "text-red-600"}`}>{value}</span>
+        <span className="text-[15px] text-slate-500 tabular-nums">/ {target} {t("mins")}</span>
+      </div>
+      <div className="mt-3 h-1 rounded-full bg-slate-200 overflow-hidden">
+        <div className={`h-full rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`} style={{ width: `${Math.min(100, (value / target) * 100)}%` }} />
+      </div>
+      {!ok && <p className="m-0 mt-2 text-[13px] text-red-600">{zh ? `低于院舍目标 ${target} 分钟，要复核` : `Below the facility target of ${target} minutes; review required`}</p>}
+    </div>
+  );
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <h1 className="text-2xl font-medium tracking-tight text-slate-800">
-            {t("roster_compliance_guard")}
-          </h1>
+    <div>
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[15px] text-slate-600 hover:text-slate-900 min-h-11 mb-2">
+        <ArrowLeft className="w-4 h-4" />{zh ? "返回看板" : "Back to dashboard"}
+      </button>
+      <div className="flex flex-wrap items-end gap-4 mb-8">
+        <div className="flex-1">
+          <h1 className="text-[40px] leading-[48px] font-semibold text-slate-900">{t("roster_compliance_guard")}</h1>
+          <p className="text-base text-slate-500 mt-2">{zh ? "每个班都要有注册护士在场，护理时长要达标，才能保存排班。" : "Every shift needs an RN on site and care minutes must meet target before the roster can be saved."}</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            disabled={hasRnBreach || !isCareMinutesCompliant}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors ${
-              hasRnBreach || !isCareMinutesCompliant
-                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                : "bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
-            }`}
-          >
-            {hasRnBreach || !isCareMinutesCompliant ? (
-              <>
-                <Lock className="w-4 h-4" /> {t("save_roster")}
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="w-4 h-4" /> {t("save_roster")}
-              </>
-            )}
-          </button>
-        </div>
+        <button disabled={locked}
+          className="inline-flex items-center gap-2 min-h-12 px-7 rounded-full bg-slate-900 text-white text-[16px] font-semibold disabled:bg-black/10 disabled:text-slate-500 disabled:cursor-not-allowed">
+          {locked ? <Lock className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />} {t("save_roster")}
+        </button>
       </div>
 
-      {/* Blocking Banners */}
       {hasRnBreach && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-4">
-          <XOctagon className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-red-800 font-bold tracking-tight">
-              {t("roster_breach_alert")}
-            </h3>
-            <div className="text-red-700 text-sm mt-1 space-y-1">
-              {breaches.map((b) => (
-                <p key={b.id}>
-                  {t("missing_rn_for")}{" "}
-                  <strong>
-                    {b.day} {b.shiftType}
-                  </strong>{" "}
-                  {t("shift_word")} ({b.time}).
-                </p>
-              ))}
-              <p className="mt-2 font-medium">
-                {t("risk_sanction_msg")}
-              </p>
-            </div>
-          </div>
+        <div className="rounded-[24px] bg-red-50 p-6 mb-10">
+          <span className="flex items-center gap-2 text-[13px] font-medium text-red-600"><span className="w-2 h-2 rounded-full bg-red-500" aria-hidden="true" />{t("roster_breach_alert")}</span>
+          <ul className="m-0 mt-2 p-0 list-none flex flex-col gap-1">
+            {breaches.map((b) => (
+              <li key={b.id} className="text-[17px] text-slate-900">
+                <span className="font-semibold">{dayL(b.day)} {shiftL(b.shiftType)}</span>
+                <span className="text-slate-600">（{b.time}）{zh ? "没有注册护士" : " has no RN"}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 mt-3 text-[14px] text-red-700">{t("risk_sanction_msg")}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Care Minutes Widget */}
-        <div className="lg:col-span-1 border border-slate-200 rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="text-base font-medium tracking-tight text-slate-800 mb-6 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-400" /> {t("care_minutes_target")}
-          </h2>
-
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-500">
-                  {t("average_total_care_minutes")}
-                </span>
-                <span
-                  className={
-                    isCareMinutesCompliant
-                      ? "text-slate-800 font-medium"
-                      : "text-red-600 font-bold"
-                  }
-                >
-                  {averageCareMinutes} / {facilityCareMinuteTarget} {t("mins")}
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${isCareMinutesCompliant ? "bg-teal-500" : "bg-red-500"}`}
-                  style={{
-                    width: `${Math.min(100, (averageCareMinutes / facilityCareMinuteTarget) * 100)}%`,
-                  }}
-                />
-              </div>
-              {!isCareMinutesCompliant && (
-                <p className="text-xs text-red-600 font-medium mt-2">
-                  Below facility target of {facilityCareMinuteTarget} care
-                  minutes — review required
-                </p>
-              )}
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-500">{t("of_which_rn_minutes")}</span>
-                <span
-                  className={
-                    isRnMinutesCompliant
-                      ? "text-slate-800 font-medium"
-                      : "text-red-600 font-bold"
-                  }
-                >
-                  {averageRnMinutes} / {facilityRnMinuteTarget} {t("mins")}
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${isRnMinutesCompliant ? "bg-teal-500" : "bg-red-500"}`}
-                  style={{
-                    width: `${Math.min(100, (averageRnMinutes / facilityRnMinuteTarget) * 100)}%`,
-                  }}
-                />
-              </div>
-              {!isRnMinutesCompliant && (
-                <p className="text-xs text-red-600 font-medium mt-2">
-                  Below facility target of {facilityRnMinuteTarget} RN minutes
-                  — review required
-                </p>
-              )}
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-slate-100">
-              Targets: {targetSource} (effective {targetEffectiveDate}).
-              Case-mix adjusted targets vary by provider and resident profile.
-            </p>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-x-10 mb-12">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-10">
+          <Meter label={t("average_total_care_minutes")} value={averageCareMinutes} target={facilityCareMinuteTarget} ok={isCareMinutesCompliant} />
+          <Meter label={t("of_which_rn_minutes")} value={averageRnMinutes} target={facilityRnMinuteTarget} ok={isRnMinutesCompliant} />
         </div>
-
-        {/* 24/7 RN Summary */}
-        <div className="lg:col-span-2 border border-slate-200 rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="text-base font-medium tracking-tight text-slate-800 mb-6 flex items-center gap-2">
-            <Users className="w-4 h-4 text-slate-400" /> {t("rn_coverage_status")}
-          </h2>
-          <div className="flex items-center gap-8">
-            <div className="flex-1">
-              <div className="text-3xl font-light text-slate-800 tracking-tight">
-                {shifts.length - breaches.length}{" "}
-                <span className="text-base text-slate-500 font-normal">
-                  / {shifts.length} {t("shifts_covered")}
-                </span>
-              </div>
-              <p className="text-sm text-slate-500 mt-2">
-                {t("required_rn_onsite")}
-              </p>
-            </div>
-            {hasRnBreach ? (
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-8 h-8 text-red-600" />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-8 h-8 text-teal-600" />
-              </div>
-            )}
+        <div className="py-5 border-t border-slate-200">
+          <span className="text-[13px] text-slate-500">{t("rn_coverage_status")}</span>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className={`text-[44px] leading-none font-light tracking-[-0.03em] tabular-nums ${hasRnBreach ? "text-red-600" : "text-slate-900"}`}>{shifts.length - breaches.length}</span>
+            <span className="text-[15px] text-slate-500">/ {shifts.length} {t("shifts_covered")}</span>
           </div>
+          <p className="m-0 mt-3 text-[13px] text-slate-500">{t("required_rn_onsite")}</p>
         </div>
+        <p className="lg:col-span-3 m-0 pt-3 border-t border-slate-200 text-[12px] text-slate-400">
+          {zh ? `目标来自院舍的季度护理时长设置（${targetEffectiveDate} 起），按长者情况调整，每家院舍不同。` : `Targets: ${targetSource} (effective ${targetEffectiveDate}). Case-mix adjusted; they vary by provider.`}
+        </p>
       </div>
 
-      {/* Roster Grid */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-base font-medium tracking-tight text-slate-800">
-            {t("weekly_roster_view")}
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4 font-medium">Day</th>
-                {shiftTypes.map((type) => (
-                  <th key={type} className="px-6 py-4 font-medium">
-                    {type} Shift
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {days.map((day) => (
-                <tr key={day} className="hover:bg-slate-50/50">
-                  <td className="px-6 py-4 font-medium text-slate-800 border-r border-slate-100">
-                    {day}
-                  </td>
-                  {shiftTypes.map((type) => {
-                    const shift = shifts.find(
-                      (s) => s.day === day && s.shiftType === type,
-                    );
-                    if (!shift)
-                      return <td key={type} className="px-6 py-4"></td>;
-
-                    const isBreach = shift.rnCount === 0;
-
-                    return (
-                      <td
-                        key={type}
-                        className={`px-4 py-4 border-r last:border-r-0 border-slate-100 ${isBreach && editingShiftId !== shift.id ? "bg-red-50" : ""}`}
-                      >
-                        {editingShiftId === shift.id ? (
-                          <form onSubmit={handleSaveShift} className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <label className="text-xs text-slate-500 w-12">RNs:</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={editRnCount}
-                                onChange={(e) => setEditRnCount(parseInt(e.target.value) || 0)}
-                                className="w-16 px-2 py-1 text-sm border border-slate-300 rounded"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="text-xs text-slate-500 w-12">Care:</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={editPwCount}
-                                onChange={(e) => setEditPwCount(parseInt(e.target.value) || 0)}
-                                className="w-16 px-2 py-1 text-sm border border-slate-300 rounded"
-                              />
-                            </div>
-                            <div className="flex gap-2 mt-1">
-                              <button type="submit" className="px-2 py-1 bg-teal-600 text-white text-xs rounded hover:bg-teal-700">Save</button>
-                              <button type="button" onClick={() => setEditingShiftId(null)} className="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300">Cancel</button>
-                            </div>
-                          </form>
-                        ) : (
-                          <div className="flex flex-col gap-1.5 group cursor-pointer" onClick={() => handleEditClick(shift)}>
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-400 font-mono">
-                                {shift.time}
-                              </span>
-                              <span className="text-xs text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
-                            </div>
-                            <div
-                              className={`flex items-center gap-1.5 font-medium ${isBreach ? "text-red-700" : "text-teal-700"}`}
-                            >
-                              {isBreach ? (
-                                <AlertTriangle className="w-3.5 h-3.5" />
-                              ) : (
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                              )}
-                              {shift.rnCount} RNs{" "}
-                              {isBreach && (
-                                <span className="text-xs text-red-600 ml-1 uppercase tracking-wider">
-                                  (Breach)
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-slate-500 text-xs">
-                              {shift.pwCount} Care Workers
-                            </div>
+      <h2 className="text-[26px] font-semibold text-slate-900">{t("weekly_roster_view")}</h2>
+      <p className="text-[14px] text-slate-500 mt-1 mb-4">{zh ? "点一个班可以改人数。" : "Tap a shift to change staffing."}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left border-collapse">
+          <thead>
+            <tr className="text-[13px] text-slate-500">
+              <th className="py-3 pr-4 font-normal w-24 border-b border-slate-200">{zh ? "日期" : "Day"}</th>
+              {shiftTypes.map((type) => <th key={type} className="py-3 px-4 font-normal border-b border-slate-200">{shiftL(type)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {days.map((day) => (
+              <tr key={day}>
+                <td className="py-4 pr-4 text-[15px] font-semibold text-slate-900 border-b border-slate-200 align-top">{dayL(day)}</td>
+                {shiftTypes.map((type) => {
+                  const shift = shifts.find((s) => s.day === day && s.shiftType === type);
+                  if (!shift) return <td key={type} className="py-4 px-4 border-b border-slate-200 text-[13px] text-slate-300">—</td>;
+                  const isBreach = shift.rnCount === 0;
+                  return (
+                    <td key={type} className="py-2 px-2 border-b border-slate-200 align-top">
+                      {editingShiftId === shift.id ? (
+                        <form onSubmit={handleSaveShift} className="flex flex-col gap-2 p-2 rounded-xl bg-white border border-slate-200">
+                          <label className="flex items-center gap-2 text-[13px] text-slate-500">{zh ? "护士" : "RNs"}
+                            <input type="number" min="0" value={editRnCount} onChange={(e) => setEditRnCount(parseInt(e.target.value) || 0)} className="w-16 px-2 py-1 text-[14px] border-0 border-b border-slate-300 bg-transparent focus:outline-none focus:border-slate-900" />
+                          </label>
+                          <label className="flex items-center gap-2 text-[13px] text-slate-500">{zh ? "护工" : "Carers"}
+                            <input type="number" min="0" value={editPwCount} onChange={(e) => setEditPwCount(parseInt(e.target.value) || 0)} className="w-16 px-2 py-1 text-[14px] border-0 border-b border-slate-300 bg-transparent focus:outline-none focus:border-slate-900" />
+                          </label>
+                          <div className="flex gap-2">
+                            <button type="submit" className="min-h-9 px-4 rounded-full bg-slate-900 text-white text-[13px] font-semibold">{zh ? "保存" : "Save"}</button>
+                            <button type="button" onClick={() => setEditingShiftId(null)} className="min-h-9 px-4 rounded-full border border-slate-300 text-[13px]">{zh ? "取消" : "Cancel"}</button>
                           </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        </form>
+                      ) : (
+                        <button onClick={() => handleEditClick(shift)}
+                          className={`group w-full text-left p-2.5 rounded-xl transition-colors ${isBreach ? "bg-red-50 hover:bg-red-100" : "hover:bg-slate-100"}`}>
+                          <span className="block text-[12px] text-slate-500 tabular-nums">{shift.time}</span>
+                          <span className={`mt-1 flex items-center gap-2 text-[15px] ${isBreach ? "text-red-600 font-semibold" : "text-slate-900"}`}>
+                            <span className={`w-2 h-2 rounded-full ${isBreach ? "bg-red-500" : "bg-emerald-500"}`} aria-hidden="true" />
+                            {zh ? `护士 ${shift.rnCount}` : `${shift.rnCount} RN`}{isBreach && (zh ? "（缺护士）" : " (breach)")}
+                          </span>
+                          <span className="block text-[13px] text-slate-500">{zh ? `护工 ${shift.pwCount}` : `${shift.pwCount} carers`}</span>
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

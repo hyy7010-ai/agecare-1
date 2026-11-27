@@ -7,6 +7,8 @@ import { ResidentProfile } from "./ResidentProfile";
 import { RNReviewList } from "./RNReviewList";
 import { AdminDashboard } from "./AdminDashboard";
 import { SirsReviewDashboard } from "./SirsReviewDashboard";
+import { FamilyDashboard } from "./FamilyDashboard";
+import { RosterComplianceGuard } from "./RosterComplianceGuard";
 
 // fictional records for the preview only
 const at = (daysAgo: number, h: number, m: number) => { const d = new Date(); d.setDate(d.getDate() - daysAgo); d.setHours(h, m, 0, 0); return d.toISOString(); };
@@ -58,6 +60,8 @@ export function DevPreview() {
         {screen === "rn" && <RNReviewList onBack={noop} pendingReviews={REVIEWS} onConfirmReview={noop} />}
         {screen === "admin" && <AdminDashboard />}
         {screen === "sirs" && <SirsReviewDashboard onBack={noop} />}
+        {screen === "family" && <FamilyDashboard resident={mockResidents[0]} />}
+        {screen === "roster" && <RosterComplianceGuard onBack={noop} />}
       </main>
     </div>
   );
